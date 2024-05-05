@@ -172,6 +172,11 @@ def chat():
     persona = request.args.get('persona')
     return render_template('chat.html', persona=persona)
 
+@app.route('/SampleChat.html')
+def chat1():
+    persona = request.args.get('persona')
+    return render_template('SampleChat.html', persona=persona)
+
 #--------------------------------------------------------------------------------
 @app.route('/translation', methods=['POST'])
 def translation():
@@ -323,4 +328,5 @@ def remove_audio_file(filename):
 
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    #app.run(debug=False)
+    app.run(host="0.0.0.0", port=8000)
