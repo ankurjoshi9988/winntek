@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PichBuddy</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Roboto', sans-serif;
+            background: #f7f7f7;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 60px; /* Enough space for bottom nav */
+        }
+
+        .card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%; /* responsive width */
+            max-width: 340px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #333;
+            margin: 15px 0;
+            transition: transform 0.2s, box-shadow 0.2s; /* Smooth transition for hover effects */
+        }
+
+        .card:hover {
+            transform: translateY(-5px); /* Moves the card up */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* More prominent shadow */
+        }
+
+        .card img {
+            width: 50px; /* Icon size */
+            margin-right: 20px; /* Space between icon and text */
+        }
+
+        .card p {
+            font-size: 16px;
+            text-align: left;
+        }
+
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #333;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+			background-color: #404040;
+        }
+
+		nav {
+			font-family: 'Roboto', sans-serif;
+			display: flex;
+			justify-content: space-around;
+			align-items: center;
+			background: #333;
+			padding: 10px 0;
+			position: fixed;
+			bottom: 0;
+			width: 100%;
+		}
+
+		nav a {
+			color: white;
+			text-decoration: none;
+			text-align: center;
+			font-size: 9px;
+			flex: 1 1 0; /* Ensures equal distribution and alignment */
+		}
+
+		nav a img {
+			display: block; /* Centers image in its flex container */
+			margin: 0 auto;
+			width: 24px;
+			height: 24px;
+		}
+		nav a:hover {
+			background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
+			transition: background-color 0.3s ease; /* Smooth transition */
+		}
+
+
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+                margin-bottom: 80px; /* Increased space for bottom nav on mobile */
+            }
+
+            .card img {
+                width: 40px; /* Slightly smaller icons on mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+   <div class="container">
+    <a class="card" href="/recall">
+        <img src="static/recall.png" alt="Recall Icon" />
+        <div>
+            <h3>Recall</h3>
+            <p>Upload documents like brochures and reports and summarize or extract key points</p>
+        </div> 
+    </a>
+
+    <a class="card" href="refer.html">
+        <img src="static/refer.png" alt="Refer Icon" />
+        <div>
+            <h3>Refer</h3>
+            <p>Access conversation chats for learning effective communication strategies.</p>
+        </div>
+    </a>
+
+    <a class="card" href="rehearse.html">
+        <img src="static/rehearse.png" alt="Rehearse Icon" />
+        <div>
+            <h3>Rehearse</h3>
+            <p>Simulate conversation exercises with AI customer personas, enabling you to refine your communication skills and prepare for real-world interactions.</p>
+        </div>
+    </a>
+</div>
+
+	<nav>
+        <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
+        <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
+        <a href="rehearse.html"><img src="static/rehearse_icon.png" alt="Rehearse Icon">Rehearse</a>
+    </nav>	
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recall</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            overflow: hidden;
+            box-sizing: border-box;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        .lesson {
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+        input[type="file"],
+        input[type="text"],
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        input[type="submit"]:disabled {
+            background-color: #ccc;
+        }
+		nav {
+			font-family: 'Roboto', sans-serif;
+			display: flex;
+			justify-content: space-around;
+			align-items: center;
+			background: #333;
+			padding: 10px 0;
+			position: fixed;
+			bottom: 0;
+			width: 100%;
+		}
+
+		nav a {
+			color: white;
+			text-decoration: none;
+			text-align: center;			 
+			font-size: 9px !important;;
+			flex: 1 1 0; /* Ensures equal distribution and alignment */
+		}
+
+		nav a img {
+			display: block; /* Centers image in its flex container */
+			margin: 0 auto;
+			width: 24px;
+			height: 24px;
+		}
+		nav a:hover {
+			background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
+			transition: background-color 0.3s ease; /* Smooth transition */
+		}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- File upload form -->
+        <div class="lesson">
+            <form id="upload_form" action="/recall/upload" method="post" enctype="multipart/form-data">
+                <label for="pdf_docs">Upload PDF Files:</label>
+                <input type="file" id="pdf_docs" name="pdf_docs" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv">
+                <input id="upload_button" type="submit" value="Upload" disabled>
+            </form>
+        </div>
+
+        <!-- Ask question form -->
+        <div class="lesson">
+            <form id="ask_form" action="/recall/ask" method="post">
+                <label for="question">Enter Your Question:</label>
+                <input type="text" id="question" name="question" placeholder="Ask your question here..." value="">
+                <input id="ask_button" type="submit" value="Ask" disabled>
+            </form>
+        </div>
+
+        <!-- Display message if no file selected -->
+        {% if message %}
+        <div id="message">
+            <p>{{ message }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Response section -->
+        {% if response %}
+        <div id="response">
+			<p>Document uploaded...</p>
+            <h2>Response:</h2>
+            <p>{{ response }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // File upload form validation and enabling/disabling the upload button
+        document.getElementById('pdf_docs').addEventListener('change', function() {
+            var files = this.files;
+            var uploadButton = document.getElementById('upload_button');
+            uploadButton.disabled = files.length === 0;
+        });
+
+        // Question input form enabling/disabling the ask button
+        document.getElementById('question').addEventListener('input', function() {
+            var questionInput = this.value.trim();
+            var askButton = document.getElementById('ask_button');
+            askButton.disabled = questionInput === '';
+        });
+    </script>
+	<nav>
+        <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
+		<a href="/refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>		       
+        <a href="/rehearse.html"><img src="/static/rehearse_icon.png" alt="Rehearse Icon">Rehearse</a>
+    </nav>
+</body>
+</html>
