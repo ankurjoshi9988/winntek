@@ -211,25 +211,7 @@
 		
 
 function startVoiceConversation() {
-    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-        alert("Sorry, your browser does not support speech recognition.");
-        return;
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Sorry, your browser does not support microphone access.");
-        return;
-    }
-
-    // Check for secure context
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        alert("Please access the site using HTTPS or localhost to enable microphone access.");
-        return;
-    }
-
-    var recognition = new SpeechRecognition();
+    var recognition = new webkitSpeechRecognition();
     recognition.lang = 'hi-IN';
 
     recognition.onresult = function(event) {
@@ -303,15 +285,6 @@ function startVoiceConversation() {
             }
         });
     };
-	recognition.onerror = function(event) {
-        if (event.error == 'not-allowed') {
-            alert("Microphone access has been denied.");
-        } else {
-            console.error("Speech recognition error:", event.error);
-        }
-    };
-
-    
 
     recognition.start();
 }
