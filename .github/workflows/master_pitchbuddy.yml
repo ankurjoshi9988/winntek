@@ -20,9 +20,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install system dependencies
-        run: sudo apt-get install -y build-essential portaudio19-dev
-
       - name: Create and start virtual environment
         run: |
           python -m venv venv
@@ -65,9 +62,6 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_3A46B412A6214ABC8777F3F2450AB7FA }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F4DE6807E94E4F27A88345ACDA212826 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_64BEA9000EF9409791E26BC814222470 }}
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Web App
@@ -76,4 +70,4 @@ jobs:
         with:
           app-name: 'PitchBuddy'
           slot-name: 'Production'
-          startup-command: "source venv/bin/activate && gunicorn --bind=0.0.0.0 --timeout 600 chdir main:app"
+          startup-command: "source venv/bin/activate && gunicorn --bind=0.0.0.0 --timeout 600 --chdir main app:app"
