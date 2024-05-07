@@ -42,7 +42,10 @@ jobs:
       - name: Configure deployment setting
         uses: azure/CLI@v1
         with:
-          inlineScript: az webapp config set -g AIBuddy -n PitBuddy --linux-fx-version "PYTHON|3.10" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+          inlineScript: |
+            az webapp config set --resource-group AIBuddy \
+                                --name PitBuddy \
+                                --generic-configurations "{\"SCM_DO_BUILD_DURING_DEPLOYMENT\": false}"
 
   deploy:
     runs-on: ubuntu-latest
