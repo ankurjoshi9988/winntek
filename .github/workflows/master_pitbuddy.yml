@@ -18,6 +18,11 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install system dependencies for PyAudio
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev
+
       - name: Install dependencies
         run: |
           python -m venv /tmp/venv
@@ -25,8 +30,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Zip artifact for deployment
-        run: |
-          zip -r release.zip ./* -x ".git/*"
+        run: zip -r release.zip ./* -x ".git/*"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v3
@@ -63,4 +67,3 @@ jobs:
         with:
           app-name: 'PitBuddy'
           package: release.zip
-          slot-name: 'Production'
