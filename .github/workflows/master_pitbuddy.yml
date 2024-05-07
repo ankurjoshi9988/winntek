@@ -17,17 +17,17 @@ jobs:
         run: docker build -t pitbuddy:latest .
 
       - name: Tag Docker image
-        run: docker tag pitbuddy:latest <your-azure-container-registry>/pitbuddy:latest
+        run: docker tag pitbuddy:latest mmyregistry.azurecr.io/pitbuddy:latest
 
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: <your-azure-container-registry>
+          login-server: myregistry.azurecr.io
           username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
           password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
 
       - name: Push Docker image
-        run: docker push <your-azure-container-registry>/pitbuddy:latest
+        run: docker push mmyregistry.azurecr.io/pitbuddy:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -43,5 +43,5 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'PitBuddy'
-          images: <your-azure-container-registry>/pitbuddy:latest
+          images: mmyregistry.azurecr.io/pitbuddy:latest
           resource-group: 'AIBuddy'
