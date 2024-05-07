@@ -1,4 +1,4 @@
-name: Build and deploy Python app to Azure Web App - PitchBuddy
+name: Build and deploy Python app to Azure Web App - PitBuddy
 
 on:
   push:
@@ -66,5 +66,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'PitchBuddy'
+          app-name: 'PitBuddy'
           package: release.zip
+          slot-name: 'production'
+          resource-group: '<Your-Resource-Group-Name>'
