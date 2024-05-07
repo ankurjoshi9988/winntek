@@ -31,7 +31,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip ./* -x ".git/*"
+        run: zip -r release.zip ./* -x ".git/*" ".venv/*"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v3
@@ -68,5 +68,5 @@ jobs:
         with:
           app-name: 'PitBuddy'
           package: release.zip
-          slot-name: 'production'
           resource-group: '<Your-Resource-Group-Name>'
+          slot-name: 'production'
