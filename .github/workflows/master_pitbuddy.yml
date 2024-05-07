@@ -44,6 +44,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Configure Azure Web App Container
+        run: |
+          az webapp config container set \
+            --name PitBuddy \
+            --resource-group AIBuddy \
+            --docker-custom-image-name mmyregistry.azurecr.io/pitbuddy:latest \
+            --docker-registry-server-url https://mmyregistry.azurecr.io \
+            --docker-registry-server-user ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} \
+            --docker-registry-server-password ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+
       - name: Deploy to Azure Web App for Containers
         uses: azure/webapps-deploy@v2
         with:
