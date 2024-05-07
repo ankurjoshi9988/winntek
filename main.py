@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 import json
 import csv
 from knowledge import knowledge_bp
+import site
+print(site.getsitepackages())
+
 from fuzzywuzzy import fuzz
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, PromptTemplate
