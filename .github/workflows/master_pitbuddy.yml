@@ -13,26 +13,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v2
+      - name: Build Docker image
+        run: docker build -t pitbuddy:latest .
+
+      - name: Tag Docker image
+        run: docker tag pitbuddy:latest <your-azure-container-registry>/pitbuddy:latest
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
         with:
-          python-version: '3.10'
+          login-server: <your-azure-container-registry>
+          username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
 
-      - name: Install dependencies
-        run: |
-          python -m venv /tmp/venv
-          source /tmp/venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Zip artifact for deployment
-        run: zip -r release.zip ./* -x ".git/*" ".venv/*"
-
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v3
-        with:
-          name: python-app
-          path: release.zip
+      - name: Push Docker image
+        run: docker push <your-azure-container-registry>/pitbuddy:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -44,25 +39,9 @@ jobs:
       id-token: write
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v3
-        with:
-          name: python-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App for Containers
         uses: azure/webapps-deploy@v2
-        id: deploy-to-webapp
         with:
           app-name: 'PitBuddy'
-          package: release.zip
+          images: <your-azure-container-registry>/pitbuddy:latest
           resource-group: 'AIBuddy'
-          slot-name: 'production'
-          startup-command: 'bash startup.sh'
