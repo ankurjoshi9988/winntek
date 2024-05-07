@@ -1,4 +1,4 @@
-name: Build and deploy Python app to Azure Web App - PitBuddy
+name: Build and deploy Python app to Azure Web App - PitchBuddy
 
 on:
   push:
@@ -27,6 +27,7 @@ jobs:
         run: |
           python -m venv /tmp/venv
           source /tmp/venv/bin/activate
+          pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Zip artifact for deployment
@@ -65,5 +66,5 @@ jobs:
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'PitBuddy'
+          app-name: 'PitchBuddy'
           package: release.zip
