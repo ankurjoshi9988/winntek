@@ -29,19 +29,15 @@ jobs:
       - name: Push Docker image
         run: docker push mmyregistry.azurecr.io/pitbuddy:latest
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    steps:
       - name: Deploy to Azure Web App for Containers
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'PitBuddy'
           images: mmyregistry.azurecr.io/pitbuddy:latest
           resource-group: 'AIBuddy'
+          slot-name: 'production'
