@@ -162,28 +162,24 @@ def chat1():
 
 @app.route('/translation', methods=['POST'])
 async def translation():
-    try:
-        agent_message = request.json.get('message')
-        systemPrompt = PromptTemplate.from_template(
-            "You are helpful assistant, don't reveal yourself, just translates {input_language} to {output_language}."
-        )
-        humanPrompt = PromptTemplate.from_template("{text}")
-        systemMessagePrompt = SystemMessagePromptTemplate(prompt=systemPrompt)
-        humanMessagePrompt = HumanMessagePromptTemplate(prompt=humanPrompt)
-        chatPrompt = ChatPromptTemplate.from_messages([systemMessagePrompt, humanMessagePrompt])
+    agent_message = request.json.get('message')
+    systemPrompt = PromptTemplate.from_template(
+        "You are helpful assistant, don't reveal yourself, just translates {input_language} to {output_language}."
+    )
+    humanPrompt = PromptTemplate.from_template("{text}")
+    systemMessagePrompt = SystemMessagePromptTemplate(prompt=systemPrompt)
+    humanMessagePrompt = HumanMessagePromptTemplate(prompt=humanPrompt)
+    chatPrompt = ChatPromptTemplate.from_messages([systemMessagePrompt, humanMessagePrompt])
 
-        formatChatPrompt2 = chatPrompt.format_messages(
-            input_language="Hindi",
-            output_language="English",
-            text=agent_message
-        )
-        response3 = await asyncio.to_thread(llm.invoke, formatChatPrompt2)
-        hindi_message = response3.content
-        print(response3.content)
-        return jsonify({"hindi_message": hindi_message})
-    except Exception as e:
-        logging.error("Failed to process translation:", exc_info=True)
-        return jsonify({"error": "Internal server error", "details": str(e)}), 500
+    formatChatPrompt2 = chatPrompt.format_messages(
+        input_language="Hindi",
+        output_language="English",
+        text=agent_message
+    )
+    response3 = await asyncio.to_thread(llm.invoke, formatChatPrompt2)
+    hindi_message = response3.content
+    print(response3.content)
+    return jsonify({"hindi_message": hindi_message})
 
 
 @app.route('/start_conversation/<persona>', methods=['POST'])
