@@ -13,14 +13,12 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Create and activate a virtual environment, then install dependencies
-RUN python -m venv venv && \
-    . venv/bin/activate && \
-    pip install --upgrade pip && \
+# Install Python dependencies
+RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# Set the environment variable for the virtual environment
-ENV PATH="/app/venv/bin:$PATH"
+# Make port 8000 available to the world outside this container
+EXPOSE 8000
 
 # Command to run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"]
