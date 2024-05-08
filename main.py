@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import json
 import csv
 from knowledge import knowledge_bp
+import logging
 import site
 print(site.getsitepackages())
 
