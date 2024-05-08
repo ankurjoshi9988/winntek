@@ -5,7 +5,7 @@ FROM python:3.10-slim
 RUN apt-get update && apt-get install -y \
     gcc \
     portaudio19-dev \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
 
 # Set the working directory in the container
 WORKDIR /app
@@ -14,8 +14,7 @@ WORKDIR /app
 COPY . /app
 
 # Install Python dependencies
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
