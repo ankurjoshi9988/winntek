@@ -160,31 +160,55 @@ def chat1():
     persona = request.args.get('persona')
     return render_template('SampleChat.html', persona=persona)
 
-
+# Setup logging
+logging.basicConfig(level=logging.ERROR)
 @app.route('/translation', methods=['POST'])
 async def translation():
     try:
-        agent_message = request.json.get('message')
+        # Ensure the request has a JSON body
+        if not request.is_json:
+            logging.error("Request is not JSON")
+            return jsonify({"error": "Bad request", "details": "Request must be JSON"}), 400
+
+        # Attempt to extract the message, with validation
+        data = request.get_json()
+        agent_message = data.get('message')
+        if not agent_message:
+            logging.error("No 'message' key in JSON request")
+            return jsonify({"error": "Bad request", "details": "Missing 'message' key in request"}), 400
+
+        # Define the prompts using the templates
         systemPrompt = PromptTemplate.from_template(
-            "You are helpful assistant, don't reveal yourself, just translates {input_language} to {output_language}."
+            "You are a helpful assistant, don't reveal yourself, just translate {input_language} to {output_language}."
         )
         humanPrompt = PromptTemplate.from_template("{text}")
         systemMessagePrompt = SystemMessagePromptTemplate(prompt=systemPrompt)
         humanMessagePrompt = HumanMessagePromptTemplate(prompt=humanPrompt)
         chatPrompt = ChatPromptTemplate.from_messages([systemMessagePrompt, humanMessagePrompt])
 
+        # Format the message for translation
         formatChatPrompt2 = chatPrompt.format_messages(
             input_language="Hindi",
             output_language="English",
             text=agent_message
         )
+
+        # Invoke the external LLM API
         response3 = await asyncio.to_thread(llm.invoke, formatChatPrompt2)
         hindi_message = response3.content
-        print(response3.content)
+        print(response3.content)  # Consider removing or altering this in production for privacy/security reasons
+
         return jsonify({"hindi_message": hindi_message})
-    except Exception as e:
-        logging.error("Failed to process translation:", exc_info=True)
+
+    except KeyError as e:
+        # Specific exception for missing keys in JSON
+        logging.error(f"Key error in processing translation: {e}", exc_info=True)
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
+    except Exception as e:
+        # General exception for any other unhandled errors
+        logging.error("Failed to process translation", exc_info=True)
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
+
 
 
 @app.route('/start_conversation/<persona>', methods=['POST'])
