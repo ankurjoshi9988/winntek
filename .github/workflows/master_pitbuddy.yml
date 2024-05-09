@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'src/**'
-      - 'Dockerfile'
-      - 'requirements.txt'
   workflow_dispatch:
 
 jobs:
@@ -17,13 +13,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check for changes in requirements
+        id: req-changes
+        uses: jitterbit/get-changed-files@v1
+        with:
+          format: 'space-delimited'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Docker image
+        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || github.event_name == 'workflow_dispatch'
         run: docker build -t pitbuddy:latest .
 
       - name: Tag Docker image
+        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || github.event_name == 'workflow_dispatch'
         run: docker tag pitbuddy:latest mmyregistry.azurecr.io/pitbuddy:latest
 
       - name: Login to Azure Container Registry
+        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || github.event_name == 'workflow_dispatch'
         uses: azure/docker-login@v1
         with:
           login-server: mmyregistry.azurecr.io
