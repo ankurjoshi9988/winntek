@@ -13,31 +13,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for changes in requirements
-        id: req-changes
-        uses: jitterbit/get-changed-files@v1
-        with:
-          format: 'space-delimited'
-          token: ${{ secrets.GITHUB_TOKEN }}
-
+      # Build Docker image
       - name: Build Docker image
-        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || github.event_name == 'workflow_dispatch'
         run: docker build -t pitbuddy:latest .
 
+      # Tag Docker image
       - name: Tag Docker image
-        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || github.event_name == 'workflow_dispatch'
         run: docker tag pitbuddy:latest mmyregistry.azurecr.io/pitbuddy:latest
 
+      # Login to Azure Container Registry
       - name: Login to Azure Container Registry
-        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || github.event_name == 'workflow_dispatch'
         uses: azure/docker-login@v1
         with:
           login-server: mmyregistry.azurecr.io
           username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
           password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
 
+      # Push Docker image
       - name: Push Docker image
-        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || contains(steps.req-changes.outputs.all, 'src/**') || github.event_name == 'workflow_dispatch'
         run: docker push mmyregistry.azurecr.io/pitbuddy:latest
 
   deploy:
@@ -45,11 +38,13 @@ jobs:
     needs: build
 
     steps:
+      # Login to Azure
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # Configure Azure Web App Container
       - name: Configure Azure Web App Container
         run: |
           az webapp config container set \
@@ -60,6 +55,7 @@ jobs:
             --docker-registry-server-user ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} \
             --docker-registry-server-password ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
 
+      # Deploy to Azure Web App for Containers
       - name: Deploy to Azure Web App for Containers
         uses: azure/webapps-deploy@v2
         with:
