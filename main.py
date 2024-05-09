@@ -156,7 +156,7 @@ def chat2():
     persona = request.args.get('persona')
     return render_template('chat.html', persona=persona)
 
-
+#demo
 @app.route('/SampleChat.html')
 def chat1():
     persona = request.args.get('persona')
