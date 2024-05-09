@@ -210,10 +210,8 @@
 
 		
 
-function startVoiceConversation() {
-    
-
-    var recognition = new SpeechRecognition();
+function startVoiceConversation() { 
+    var recognition = new webkitSpeechRecognition();
     recognition.lang = 'hi-IN';
 
     recognition.onresult = function(event) {
