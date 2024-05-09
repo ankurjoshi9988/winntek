@@ -37,7 +37,6 @@ jobs:
           password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
 
       - name: Push Docker image
-        if: contains(steps.req-changes.outputs.all, 'requirements.txt') || github.event_name == 'workflow_dispatch'
         run: docker push mmyregistry.azurecr.io/pitbuddy:latest
 
   deploy:
