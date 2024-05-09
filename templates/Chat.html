@@ -211,23 +211,7 @@
 		
 
 function startVoiceConversation() {
-    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-        alert("Sorry, your browser does not support speech recognition.");
-        return;
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Sorry, your browser does not support microphone access.");
-        return;
-    }
-
-    // Check for secure context
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        alert("Please access the site using HTTPS or localhost to enable microphone access.");
-        return;
-    }
+    
 
     var recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
