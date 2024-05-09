@@ -287,16 +287,7 @@ function startVoiceConversation() {
             }
         });
     };
-	recognition.onerror = function(event) {
-        if (event.error == 'not-allowed') {
-            alert("Microphone access has been denied.");
-        } else {
-            console.error("Speech recognition error:", event.error);
-        }
-    };
-
-    
-
+	
     recognition.start();
 }
 
