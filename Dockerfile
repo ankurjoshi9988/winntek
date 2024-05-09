@@ -10,12 +10,16 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy only the requirements.txt initially to leverage Docker cache
+COPY requirements.txt .
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Python dependencies and verify gunicorn installation
-RUN pip install --no-cache-dir -r requirements.txt && \
-    gunicorn --version
+# Now copy the rest of your application files into the container
+COPY . .
+
+# Verify gunicorn installation
+RUN gunicorn --version
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000

@@ -1,0 +1,16 @@
+# Version control directories
+.git/
+.github/
+
+# IDE settings
+.idea/
+__pycache__/
+
+# Virtual environment
+venv/
+
+# System files
+Thumbs.db
+
+# Environment secrets
+.env
