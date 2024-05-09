@@ -151,7 +151,7 @@ def persona_selection():
     return render_template('rehearse.html')
 
 
-@app.route('/chat.html')
+@app.route('/Chat.html')
 def chat2():
     persona = request.args.get('persona')
     return render_template('chat.html', persona=persona)
