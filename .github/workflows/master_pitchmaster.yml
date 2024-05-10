@@ -49,7 +49,7 @@ jobs:
         run: |
           az webapp config container set \
             --name PitchMaster \
-            --resource-group PitchMaster \
+            --resource-group InsuBuddy \
             --docker-custom-image-name mmyregistry.azurecr.io/pitchmaster:latest \
             --docker-registry-server-url https://mmyregistry.azurecr.io \
             --docker-registry-server-user ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} \
