@@ -167,6 +167,7 @@ logging.basicConfig(level=logging.ERROR)
 @app.route('/translation', methods=['POST'])
 async def translation():
     try:
+        """
         # Ensure the request has a JSON body
         if not request.is_json:
             logging.error("Request is not JSON")
@@ -199,7 +200,8 @@ async def translation():
         response3 = await asyncio.to_thread(llm.invoke, formatChatPrompt2)
         hindi_message = response3.content
         print(response3.content)  # Consider removing or altering this in production for privacy/security reasons
-
+        """
+        hindi_message = "This is a sample text"
         return jsonify({"hindi_message": hindi_message})
 
     except KeyError as e:
