@@ -163,7 +163,7 @@ def chat1():
     return render_template('SampleChat.html', persona=persona)
 
 # Setup logging
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 @app.route('/translation', methods=['POST'])
 async def translation():
     try:
