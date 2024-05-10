@@ -1,7 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
-
 name: Build and deploy Python app to Azure Web App - PitchMaster
 
 on:
@@ -17,62 +13,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v1
+      # Build Docker image
+      - name: Build Docker image
+        run: docker build -t pitchmaster:latest .
+
+      # Tag Docker image
+      - name: Tag Docker image
+        run: docker tag pitchmaster:latest mmyregistry.azurecr.io/pitchmaster:latest
+
+      # Login to Azure Container Registry
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
         with:
-          python-version: '3.10'
+          login-server: mmyregistry.azurecr.io
+          username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
 
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-      
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
-
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
-
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v3
-        with:
-          name: python-app
-          path: |
-            release.zip
-            !venv/
+      # Push Docker image
+      - name: Push Docker image
+        run: docker push mmyregistry.azurecr.io/pitchmaster:latest
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v3
-        with:
-          name: python-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      
+      # Login to Azure
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_01B95CE305F04BDDB192D4BCB09A3A5E }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_2AE7C688E81945E6A6A19ED8A5CD1D5F }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_249551E2C67B415EB7D0EB99EE3F9C65 }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 'Deploy to Azure Web App'
+      # Configure Azure Web App Container
+      - name: Configure Azure Web App Container
+        run: |
+          az webapp config container set \
+            --name PitchMaster \
+            --resource-group PitchMaster \
+            --docker-custom-image-name mmyregistry.azurecr.io/pitchmaster:latest \
+            --docker-registry-server-url https://mmyregistry.azurecr.io \
+            --docker-registry-server-user ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} \
+            --docker-registry-server-password ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+
+      # Deploy to Azure Web App for Containers
+      - name: Deploy to Azure Web App for Containers
         uses: azure/webapps-deploy@v2
-        id: deploy-to-webapp
         with:
           app-name: 'PitchMaster'
-          slot-name: 'Production'
-          
+          images: mmyregistry.azurecr.io/pitchmaster:latest
+          resource-group: 'InsuBuddy'
+          slot-name: 'production'
