@@ -23,8 +23,8 @@ load_dotenv()
 #os.getenv("GOOGLE_API_KEY")
 #genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-os.environ["GOOGLE_API_KEY"] = "AIzaSyCOPZwW2KPTNpYXdyifH7MQZsosK3itw_0"
-api_key=os.environ["GOOGLE_API_KEY"]
+os.environ['GOOGLE_API_KEY']="AIzaSyCOPZwW2KPTNpYXdyifH7MQZsosK3itw_0"
+api_key=os.environ['GOOGLE_API_KEY']
 genai.configure(api_key=api_key)
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
 
@@ -169,7 +169,6 @@ logging.basicConfig(level=logging.INFO)
 @app.route('/translation', methods=['POST'])
 async def translation():
     try:
-
         # Ensure the request has a JSON body
         if not request.is_json:
             logging.error("Request is not JSON")
