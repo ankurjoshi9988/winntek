@@ -1,4 +1,4 @@
-name: Build and deploy Python app to Azure Web App - PitBuddy
+name: Build and deploy Python app to Azure Web App - PitchMaster
 
 on:
   push:
@@ -15,11 +15,11 @@ jobs:
 
       # Build Docker image
       - name: Build Docker image
-        run: docker build -t pitbuddy:latest .
+        run: docker build -t PitchMaster:latest .
 
       # Tag Docker image
       - name: Tag Docker image
-        run: docker tag pitbuddy:latest mmyregistry.azurecr.io/pitbuddy:latest
+        run: docker tag PitchMaster:latest mmyregistry.azurecr.io/PitchMaster:latest
 
       # Login to Azure Container Registry
       - name: Login to Azure Container Registry
@@ -31,7 +31,7 @@ jobs:
 
       # Push Docker image
       - name: Push Docker image
-        run: docker push mmyregistry.azurecr.io/pitbuddy:latest
+        run: docker push mmyregistry.azurecr.io/PitchMaster:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -48,9 +48,9 @@ jobs:
       - name: Configure Azure Web App Container
         run: |
           az webapp config container set \
-            --name PitBuddy \
-            --resource-group AIBuddy \
-            --docker-custom-image-name mmyregistry.azurecr.io/pitbuddy:latest \
+            --name PitchMaster \
+            --resource-group PitchMaster \
+            --docker-custom-image-name mmyregistry.azurecr.io/PitchMaster:latest \
             --docker-registry-server-url https://mmyregistry.azurecr.io \
             --docker-registry-server-user ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} \
             --docker-registry-server-password ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
@@ -59,7 +59,7 @@ jobs:
       - name: Deploy to Azure Web App for Containers
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'PitBuddy'
-          images: mmyregistry.azurecr.io/pitbuddy:latest
-          resource-group: 'AIBuddy'
+          app-name: 'PitchMaster'
+          images: mmyregistry.azurecr.io/PitchMaster:latest
+          resource-group: 'PitchMaster'
           slot-name: 'production'
