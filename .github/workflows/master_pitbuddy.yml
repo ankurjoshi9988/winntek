@@ -15,11 +15,11 @@ jobs:
 
       # Build Docker image
       - name: Build Docker image
-        run: docker build -t PitchMaster:latest .
+        run: docker build -t pitchmaster:latest .
 
       # Tag Docker image
       - name: Tag Docker image
-        run: docker tag PitchMaster:latest mmyregistry.azurecr.io/PitchMaster:latest
+        run: docker tag pitchmaster:latest mmyregistry.azurecr.io/pitchmaster:latest
 
       # Login to Azure Container Registry
       - name: Login to Azure Container Registry
@@ -31,7 +31,7 @@ jobs:
 
       # Push Docker image
       - name: Push Docker image
-        run: docker push mmyregistry.azurecr.io/PitchMaster:latest
+        run: docker push mmyregistry.azurecr.io/pitchmaster:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -50,7 +50,7 @@ jobs:
           az webapp config container set \
             --name PitchMaster \
             --resource-group PitchMaster \
-            --docker-custom-image-name mmyregistry.azurecr.io/PitchMaster:latest \
+            --docker-custom-image-name mmyregistry.azurecr.io/pitchmaster:latest \
             --docker-registry-server-url https://mmyregistry.azurecr.io \
             --docker-registry-server-user ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} \
             --docker-registry-server-password ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
@@ -60,6 +60,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'PitchMaster'
-          images: mmyregistry.azurecr.io/PitchMaster:latest
+          images: mmyregistry.azurecr.io/pitchmaster:latest
           resource-group: 'PitchMaster'
           slot-name: 'production'
