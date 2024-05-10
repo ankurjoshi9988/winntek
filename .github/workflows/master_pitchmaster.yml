@@ -21,7 +21,7 @@ jobs:
       - name: Tag Docker image
         run: docker tag pitchmaster:latest mmyregistry.azurecr.io/pitchmaster:latest
 
-      # Login to Azure Container Registry
+      # Login to Azure Container Registries
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
