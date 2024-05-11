@@ -297,8 +297,10 @@
 		window.location.href = "/";
 	}
 	function selectPersona(persona) {
-        window.location.href = "SampleChat.html?persona=" + encodeURIComponent(persona);
-    }
+		var chatFilename = persona.toLowerCase().replace(/\s+/g, '_') + ".json";
+		window.location.href = "SampleChat.html?persona=" + encodeURIComponent(persona) + "&chatfile=" + encodeURIComponent(chatFilename);
+	}
+
 
 
     </script>

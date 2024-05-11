@@ -1,7 +1,8 @@
 import os
 import uuid
 import asyncio
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, send_from_directory
+import re
 from gtts import gTTS
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -141,6 +142,22 @@ async def get_persona_details(persona):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route("/get_chat")
+def get_chat():
+    chat_file = request.args.get('chatfile', type=str)
+    if not re.match(r'^[a-zA-Z0-9_]+\.json$', chat_file):
+        return jsonify({"error": "Invalid file name."}), 400
+
+    file_path = os.path.join(app.root_path, 'static', 'chat', chat_file)
+    print("Resolved file path:", file_path)  # Make sure this prints the path to the .json file
+
+    if not os.path.isfile(file_path):
+        return jsonify({"error": "File not found."}), 404
+
+    return send_from_directory(os.path.join(app.root_path, 'static', 'chat'), chat_file)
+
 
 
 @app.route('/refer.html')
