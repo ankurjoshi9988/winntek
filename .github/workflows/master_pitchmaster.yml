@@ -29,7 +29,7 @@ jobs:
           username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
           password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
 
-      # Push Docker image
+      # Push Docker image push
       - name: Push Docker image
         run: docker push mmyregistry.azurecr.io/pitchmaster:latest
 

@@ -210,7 +210,7 @@
 			console.log("Preparing to load chat content for file:", chatFile); // Log before AJAX call
 
 			$.getJSON(`/get_chat?chatfile=${encodeURIComponent(chatFile)}`, function(data) {
-				console.log("Chat content loaded successfully:", data); // Log on successful data load
+				//console.log("Chat content loaded successfully:", data); // Log on successful data load
 
 				let formattedHtml = data.map(item => {
 					if (item.type === "heading") {
