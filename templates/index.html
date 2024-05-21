@@ -57,6 +57,23 @@
             text-align: left;
         }
 
+        .logout-button {
+            background: #ff4d4d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 16px;
+            margin: 20px 0;
+            transition: background 0.3s;
+            cursor: pointer;
+        }
+
+        .logout-button:hover {
+            background: #e60000;
+        }
+
         nav {
             position: fixed;
             bottom: 0;
@@ -66,40 +83,40 @@
             display: flex;
             justify-content: space-around;
             padding: 10px 0;
-			background-color: #404040;
+            background-color: #404040;
         }
 
-		nav {
-			font-family: 'Roboto', sans-serif;
-			display: flex;
-			justify-content: space-around;
-			align-items: center;
-			background: #333;
-			padding: 10px 0;
-			position: fixed;
-			bottom: 0;
-			width: 100%;
-		}
+        nav {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #333;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
 
-		nav a {
-			color: white;
-			text-decoration: none;
-			text-align: center;
-			font-size: 9px;
-			flex: 1 1 0; /* Ensures equal distribution and alignment */
-		}
+        nav a {
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 9px;
+            flex: 1 1 0; /* Ensures equal distribution and alignment */
+        }
 
-		nav a img {
-			display: block; /* Centers image in its flex container */
-			margin: 0 auto;
-			width: 24px;
-			height: 24px;
-		}
-		nav a:hover {
-			background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
-			transition: background-color 0.3s ease; /* Smooth transition */
-		}
+        nav a img {
+            display: block; /* Centers image in its flex container */
+            margin: 0 auto;
+            width: 24px;
+            height: 24px;
+        }
 
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
 
         /* Responsive design */
         @media (max-width: 600px) {
@@ -115,36 +132,37 @@
     </style>
 </head>
 <body>
-   <div class="container">
-    <a class="card" href="/recall">
-        <img src="static/recall.png" alt="Recall Icon" />
-        <div>
-            <h3>Recall</h3>
-            <p>Upload documents like brochures and reports and summarize or extract key points</p>
-        </div> 
-    </a>
+    <div class="container">
+        <a class="card" href="/recall">
+            <img src="static/recall.png" alt="Recall Icon" />
+            <div>
+                <h3>Recall</h3>
+                <p>Upload documents like brochures and reports and summarize or extract key points</p>
+            </div>
+        </a>
 
-    <a class="card" href="refer.html">
-        <img src="static/refer.png" alt="Refer Icon" />
-        <div>
-            <h3>Refer</h3>
-            <p>Access conversation chats for learning effective communication strategies.</p>
-        </div>
-    </a>
+        <a class="card" href="refer.html">
+            <img src="static/refer.png" alt="Refer Icon" />
+            <div>
+                <h3>Refer</h3>
+                <p>Access conversation chats for learning effective communication strategies.</p>
+            </div>
+        </a>
 
-    <a class="card" href="rehearse.html">
-        <img src="static/rehearse.png" alt="Rehearse Icon" />
-        <div>
-            <h3>Rehearse</h3>
-            <p>Simulate conversation exercises with AI customer personas, enabling you to refine your communication skills and prepare for real-world interactions.</p>
-        </div>
-    </a>
-</div>
+        <a class="card" href="rehearse.html">
+            <img src="static/rehearse.png" alt="Rehearse Icon" />
+            <div>
+                <h3>Rehearse</h3>
+                <p>Simulate conversation exercises with AI customer personas, enabling you to refine your communication skills and prepare for real-world interactions.</p>
+            </div>
+        </a>
+        <a href="/auth/logout" class="logout-button">Logout</a>
+    </div>
 
-	<nav>
+    <nav>
         <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
         <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
         <a href="rehearse.html"><img src="static/rehearse_icon.png" alt="Rehearse Icon">Rehearse</a>
-    </nav>	
+    </nav>
 </body>
 </html>

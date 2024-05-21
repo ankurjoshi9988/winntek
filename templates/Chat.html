@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Insurance Chatbot</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
 		body {
 			font-family: Arial, sans-serif;
@@ -198,6 +199,7 @@
 
         
 	// Extract the persona from the URL query parameter
+	    var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');  // Fetch CSRF token from meta tag
 		const urlParams = new URLSearchParams(window.location.search);
 		const persona = urlParams.get('persona');
 		document.getElementById('persona-name').innerText = persona;
@@ -216,6 +218,7 @@ function startVoiceConversation() {
 
     recognition.onresult = function(event) {
         var transcript = event.results[0][0].transcript;
+		
 
         // Make AJAX request to get the translated message first
         $.ajax({
@@ -223,6 +226,9 @@ function startVoiceConversation() {
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ message: transcript }),
+			headers: {
+                "X-CSRFToken": csrfToken  // Include CSRF token in request header
+            },
             success: function(data) {
                 // Extract the Hindi message from the response
                 const hindiMessage = data.hindi_message;
@@ -248,6 +254,9 @@ function startVoiceConversation() {
                     type: "POST",
                     data: JSON.stringify({ message: transcript }),
                     contentType: "application/json",
+					headers: {
+						"X-CSRFToken": csrfToken  // Include CSRF token in request header
+					},
                     success: function(response) {
 						const englishMessage = response.english_message
 						console.log("Extracted English Message:", englishMessage);
@@ -350,6 +359,9 @@ function showTranslation(button, message) {
 				type: "POST",
 				data: JSON.stringify(feedbackData), // Ensure the data is properly formatted as JSON
 				contentType: "application/json",
+					headers: {
+						"X-CSRFToken": csrfToken  // Include CSRF token in request header
+					},
 				success: function(response) {
 					console.log("Feedback saved successfully:", response);
 					// You can perform any additional actions here, such as updating UI or showing a confirmation message
@@ -378,6 +390,9 @@ function showTranslation(button, message) {
 			$.ajax({
 				url: "/remove_audio_file/" + filename,
 				type: "POST",
+				headers: {
+					"X-CSRFToken": csrfToken  // Include CSRF token in request header
+				},
 				success: function(response) {
 					console.log(response);
 				},

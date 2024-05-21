@@ -1,7 +1,9 @@
 import os
 import uuid
 import asyncio
-from flask import Flask, request, render_template, jsonify, send_from_directory
+from flask import Flask, request, render_template, jsonify, send_from_directory, redirect, url_for
+from flask_login import login_required
+from datetime import timedelta
 import re
 from gtts import gTTS
 import google.generativeai as genai
@@ -19,6 +21,13 @@ from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTempla
 from langchain_core.messages import HumanMessage, SystemMessage
 import aiofiles
 from concurrent.futures import ThreadPoolExecutor
+from auth import auth_bp, init_auth
+from authlib.integrations.flask_client import OAuth
+from extensions import login_manager, csrf, mail, oauth, db
+
+
+
+
 
 load_dotenv()
 #os.getenv("GOOGLE_API_KEY")
@@ -30,6 +39,50 @@ genai.configure(api_key=api_key)
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
 
 executor = ThreadPoolExecutor()
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'a_default_secret_for_dev')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sessions expire after 30 minutes of inactivity
+
+# Initialize OAuth with the app
+oauth.init_app(app)
+
+# Configuration for Google OAuth
+oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+    authorize_params=None,
+    access_token_url='https://oauth2.googleapis.com/token',
+    access_token_params=None,
+    refresh_token_url=None,
+    redirect_uri=os.getenv('GOOGLE_REDIRECT_URI'),
+    client_kwargs={'scope': 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'}
+)
+
+# Initialize extensions with the app
+db.init_app(app)
+with app.app_context():
+    db.create_all()  # This will create the database file using SQLAlchemy
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+csrf.init_app(app)
+mail.init_app(app)
+
+# Initialize auth module
+init_auth(oauth)
+
+# Register Blueprints
+app.register_blueprint(auth_bp)
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
 async def load_feedback_data(filename):
     feedback_data = []
@@ -61,6 +114,7 @@ objection_handling = [
     for chat in conversation
 ]
 
+
 def read_persona_details_from_csv(csv_file):
     persona_data = {}
     with open(csv_file, 'r') as file:
@@ -80,11 +134,20 @@ def read_persona_details_from_csv(csv_file):
 
 persona_data = read_persona_details_from_csv('static/persona_details.csv')
 
-app = Flask(__name__)
-app.register_blueprint(knowledge_bp)
+@app.route('/load-personas')
+@login_required
+def load_personas():
+    personas = []
+    with open('static/persona_details.csv', mode='r') as file:
+        reader = csv.DictReader(file)
+        personas = [row for row in reader]
+    return jsonify({'personas': personas})
+
+
 
 
 @app.route('/save_feedback', methods=['POST'])
+@login_required
 async def save_feedback():
     feedback_data = await request.get_json()
     customer_message = feedback_data.get("customer_message")
@@ -125,6 +188,7 @@ async def save_to_json(filename, agent_message, customer_message, feedback):
 
 
 @app.route('/get_persona_details/<persona>')
+@login_required
 async def get_persona_details(persona):
     try:
         async with aiofiles.open('static/persona_details.csv', mode='r', newline='') as file:
@@ -140,11 +204,14 @@ async def get_persona_details(persona):
 
 
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 
+
 @app.route("/get_chat")
+@login_required
 def get_chat():
     chat_file = request.args.get('chatfile', type=str)
     if not re.match(r'^[a-zA-Z0-9_]+\.json$', chat_file):
@@ -161,22 +228,26 @@ def get_chat():
 
 
 @app.route('/refer.html')
+@login_required
 def refer():
     return render_template('refer.html')
 
 
 @app.route('/rehearse.html')
+@login_required
 def persona_selection():
     return render_template('rehearse.html')
 
 
 @app.route('/Chat.html')
+@login_required
 def chat2():
     persona = request.args.get('persona')
     return render_template('Chat.html', persona=persona)
 
 #demo
 @app.route('/SampleChat.html')
+@login_required
 def chat1():
     persona = request.args.get('persona')
     return render_template('SampleChat.html', persona=persona)
@@ -184,6 +255,7 @@ def chat1():
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 @app.route('/translation', methods=['POST'])
+@login_required
 async def translation():
     try:
         # Ensure the request has a JSON body
@@ -234,6 +306,7 @@ async def translation():
 
 
 @app.route('/start_conversation/<persona>', methods=['POST'])
+@login_required
 async def start_conversation(persona):
     agent_message = request.json.get('message')
     audio_file_name = str(uuid.uuid4()) + ".mp3"
