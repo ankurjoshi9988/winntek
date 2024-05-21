@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 # Load environment variables from .env file
 load_dotenv()
 
-
+#auth_bp
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 def init_auth(oauth_instance):
