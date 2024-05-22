@@ -15,6 +15,8 @@ import os
 import time
 from dotenv import load_dotenv
 import logging
+import jwt
+
 
 # Setup basic configuration for logging
 logging.basicConfig(level=logging.INFO)
@@ -40,7 +42,6 @@ def google_authorize():
     try:
         token = oauth.google.authorize_access_token()
         if token:
-            logging.info(f"Token received from Google: {token}")
             session['token'] = token
             session['token']['expires_at'] = time.time() + token.get('expires_in', 3600)
             session.modified = True
@@ -49,10 +50,26 @@ def google_authorize():
             # Retrieve user information
             user_info = oauth.google.get('https://www.googleapis.com/oauth2/v1/userinfo').json()
             logging.info(f"User info retrieved: {user_info}")
+
+            # Check the ID token payload
+            id_token = token.get('id_token')
+            if id_token:
+                id_token_payload = jwt.decode(id_token, options={"verify_signature": False})
+                logging.info(f"ID token payload: {id_token_payload}")
+
+                # Ensure 'sub' is present in the ID token payload
+                user_sub = id_token_payload.get('sub')
+                if not user_sub:
+                    raise ValueError("ID token payload does not contain 'sub'")
+
             user = User.query.filter_by(email=user_info['email']).first()
 
             if not user:
-                user = User(email=user_info['email'], username=user_info['name'], password_hash=generate_password_hash(user_info['sub'], method='pbkdf2:sha256'))
+                user = User(
+                    email=user_info['email'],
+                    username=user_info['name'],
+                    password_hash=generate_password_hash(id_token_payload['sub'], method='pbkdf2:sha256')
+                )
                 db.session.add(user)
                 db.session.commit()
 
@@ -68,6 +85,7 @@ def google_authorize():
         logging.error(f"An unexpected error occurred: {e}")
         flash("Authentication failed. Please try again.", 'error')
     return redirect(url_for('auth.login'))
+
 
 
 class RegistrationForm(FlaskForm):
