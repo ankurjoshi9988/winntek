@@ -1,3 +1,23 @@
-.env
 # Ignore virtual environment folder
 venv/
+
+# Ignore the python file
+add_is_admin_column.py
+make_user_admin.py
+
+
+# Ignore Python bytecode files
+*.pyc
+__pycache__/
+
+# Ignore SQLite database files
+*.sqlite3
+*.db.sqlite
+
+# Ignore environment variables file
+.env
+
+# Ignore other files and directories as needed
+.idea/
+*.log
+.DS_Store

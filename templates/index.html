@@ -156,6 +156,15 @@
                 <p>Simulate conversation exercises with AI customer personas, enabling you to refine your communication skills and prepare for real-world interactions.</p>
             </div>
         </a>
+		{% if current_user.is_admin %}
+        <a class="card" href="{{ url_for('admin.admin_dashboard') }}">
+            <img src="static/admin.png" alt="Admin Icon" />
+            <div>
+                <h3>Admin</h3>
+                <p>Access admin functionalities to manage users and settings.</p>
+            </div>
+        </a>
+        {% endif %}
         <a href="/auth/logout" class="logout-button">Logout</a>
     </div>
 

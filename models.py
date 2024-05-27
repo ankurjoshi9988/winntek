@@ -6,6 +6,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
 
     @property
     def is_active(self):
@@ -20,3 +21,6 @@ class User(UserMixin, db.Model):
     @property
     def is_anonymous(self):
         return False
+
+    def get_id(self):
+        return self.id

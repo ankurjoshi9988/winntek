@@ -1,13 +1,17 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from flask_mail import Message
+from extensions import mail
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from extensions import db, login_manager, oauth  # Ensure these are correctly imported from your extensions module
 from models import User  # Assuming User model is defined in models.py or similar
 from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 import base64
 from authlib.integrations.flask_client import OAuth, OAuthError
@@ -147,19 +151,36 @@ def reset_password_request():
         return redirect(url_for('auth.login'))
     return render_template('reset_password_request.html')
 
+def send_reset_email(user):
+    try:
+        token = URLSafeTimedSerializer(current_app.config['SECRET_KEY']).dumps(user.email, salt='reset-password')
+        subject = 'Password Reset Request'
+        body = f'''To reset your password, visit the following link:
+{url_for('auth.reset_password', token=token, _external=True)}
+
+If you did not make this request then simply ignore this email and no changes will be made.'''
+        msg = Message(subject, recipients=[user.email], body=body)
+        mail.send(msg)
+        logging.info(f"Password reset email sent to {user.email}")
+    except Exception as e:
+        logging.error(f"Failed to send password reset email: {e}")
+
+def generate_reset_token(email):
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt='reset-password-salt')
+
+
 @auth_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     try:
-        email = URLSafeTimedSerializer(current_app.config['SECRET_KEY']).loads(token, max_age=3600)
+        email = URLSafeTimedSerializer(current_app.config['SECRET_KEY']).loads(token, salt='reset-password', max_age=3600)
     except SignatureExpired:
         return '<h1>The token is expired!</h1>'
-    except Exception as e:
-        return f'<h1>Invalid token: {str(e)}</h1>'
-
+    except BadSignature:
+        return '<h1>Invalid token!</h1>'
     user = User.query.filter_by(email=email).first()
     if not user:
         return '<h1>User not found!</h1>'
-
     if request.method == 'POST':
         new_password = request.form['password']
         confirm_password = request.form['confirm_password']
@@ -171,8 +192,12 @@ def reset_password(token):
         else:
             flash('Passwords do not match', 'danger')
             return redirect(url_for('auth.reset_password', token=token))
-
     return render_template('reset_password.html', token=token)
+
+
+def confirm_reset_token(token, expiration=3600):
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return serializer.loads(token, salt='reset-password-salt', max_age=expiration)
 
 
 
@@ -241,16 +266,38 @@ def refresh_token(refresh_token):
         return None
 
 
+def send_gmail_api_email(to, subject, body):
+    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
-def send_reset_email(user):
-    token = URLSafeTimedSerializer(current_app.config['SECRET_KEY']).dumps(user.email, salt='reset-password')
-    subject = 'Password Reset Request'
-    body = f'''To reset your password, visit the following link:
-{url_for('auth.reset_password', token=token, _external=True)}
+    creds = None
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
 
-If you did not make this request then simply ignore this email and no changes will be made.'''
-    send_email(user, subject, body)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
 
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    service = build('gmail', 'v1', credentials=creds)
+    message = {
+        'raw': base64.urlsafe_b64encode(
+            f'To: {to}\nSubject: {subject}\n\n{body}'.encode('utf-8')
+        ).decode('utf-8')
+    }
+
+    try:
+        message = service.users().messages().send(userId='me', body=message).execute()
+        logging.info(f"Message sent: {message['id']}")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        flash('Failed to send password reset email. Please try again later.', 'error')
+
+# Update the reset password function to use the new email function
 
 def send_email(user, subject, body):
     """Send an email using the Gmail API."""

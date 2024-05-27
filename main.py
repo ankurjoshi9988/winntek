@@ -10,6 +10,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import json
 import csv
+
 from knowledge import knowledge_bp
 import logging
 import site
@@ -22,8 +23,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 import aiofiles
 from concurrent.futures import ThreadPoolExecutor
 from auth import auth_bp, init_auth
+from admin import admin_bp
 from authlib.integrations.flask_client import OAuth
 from extensions import login_manager, csrf, mail, oauth, db
+
+
 
 
 
@@ -37,17 +41,30 @@ load_dotenv()
 api_key=os.environ['GOOGLE_API_KEY']
 genai.configure(api_key=api_key)
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
-
+env = os.getenv('FLASK_ENV', 'development')
 executor = ThreadPoolExecutor()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'a_default_secret_for_dev')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+if env == 'production':
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///production_db.sqlite'  # Production database file
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+    app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USE_SSL'] = False
+else:
+    app.config['SECRET_KEY'] = 'a_default_secret_for_dev'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'  # Development database file
+    app.config['MAIL_SERVER'] = 'sandbox.smtp.mailtrap.io'
+    app.config['MAIL_PORT'] = 2525
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USE_SSL'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sessions expire after 30 minutes of inactivity
 
 # Initialize OAuth with the app
@@ -76,11 +93,13 @@ login_manager.login_view = 'auth.login'
 csrf.init_app(app)
 mail.init_app(app)
 
+
 # Initialize auth module
 init_auth(oauth)
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp, url_prefix='/admin')
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
