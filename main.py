@@ -10,7 +10,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import json
 import csv
-
+from flask_migrate import Migrate
 from knowledge import knowledge_bp
 import logging
 import site
@@ -41,13 +41,14 @@ load_dotenv()
 api_key=os.environ['GOOGLE_API_KEY']
 genai.configure(api_key=api_key)
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
+#llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True)
 env = os.getenv('FLASK_ENV', 'development')
 executor = ThreadPoolExecutor()
 
 app = Flask(__name__)
 if env == 'production':
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///production_db.sqlite'  # Production database file
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///production_db.sqlite')
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
     app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
     app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
@@ -92,7 +93,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 csrf.init_app(app)
 mail.init_app(app)
-
+migrate = Migrate(app, db)
 
 # Initialize auth module
 init_auth(oauth)
@@ -226,7 +227,6 @@ async def get_persona_details(persona):
 @login_required
 def index():
     return render_template('index.html')
-
 
 
 @app.route("/get_chat")

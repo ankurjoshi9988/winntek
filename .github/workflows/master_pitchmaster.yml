@@ -63,3 +63,11 @@ jobs:
           images: mmyregistry.azurecr.io/pitchmaster:latest
           resource-group: 'InsuBuddy'
           slot-name: 'production'
+
+      - name: Run database migrations
+        env:
+          FLASK_APP: main.py
+          FLASK_ENV: production
+          SQLALCHEMY_DATABASE_URI: "sqlite:///production_db.sqlite"
+        run: |
+          flask db upgrade

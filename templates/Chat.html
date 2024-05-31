@@ -7,6 +7,10 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
+		.timer {
+			font-size: 16px;
+			font-weight: bold;
+		}
 		body {
 			font-family: Arial, sans-serif;
 			margin: 0;
@@ -29,6 +33,12 @@
 		text-align: left;
 		margin-bottom: 10px;
 		font-size: 12px; /* Adjust font size */
+	}
+	button:disabled {
+		background-color: #cccccc; /* Change the background color */
+		color: #666666;           /* Change the text color */
+		cursor: not-allowed;      /* Change the cursor to not-allowed */
+		pointer-events: none;     /* Disable pointer events */
 	}
 	.back-button {
         cursor: pointer;
@@ -180,14 +190,15 @@
             <div class="header">
 			
 			<h1 id="persona-header"><a href="/rehearse.html">Back </a> Main Chat with <span id="persona-name"></span></h1>
-			
+			<div class="timer">Time left: <span id="time">01:00</span></div>
+			<span class="credits">Credits: <span id="credits"></span></span>
             </div> 
             <div class="chat-history" id="chat-history">
 				
 				</div>
 			</div>
 			<div class="button-container">                
-                <button class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
+                <button id="startButton"  class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
 				<button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
             </div>            
         </div>
@@ -195,24 +206,98 @@
     </div>
 
     <script>
-        
+	// Timer functionality
+    let timerStarted = false;
+	let timerInterval;
+	let credits;
+	
+	document.addEventListener('DOMContentLoaded', function () {
+    // Fetch user credits when the page loads
+		fetch('/auth/get_credits')
+			.then(response => response.json())
+			.then(data => {
+				credits = data.credits;
+				document.getElementById('credits').textContent = credits;
+				if (credits <= 0) {
+					document.getElementById("startButton").disabled = true;
+					document.getElementById("startButton").style.backgroundColor = "#cccccc";
+					document.getElementById("startButton").style.cursor = "not-allowed";
+				}
+			});
+	});
+	
+    
+    function startTimer(display) {
+		let duration = 60 * 1; // 1 minute in seconds, change number as per your requiremet of minutes.
+		let start = Date.now();		
+		let diff, minutes, seconds;
+		let creditsDeducted = false; // Track if credits have been deducted		
 
+        function timer() {
+			diff = duration - (((Date.now() - start) / 1000) | 0);
+			minutes = (diff / 60) | 0;
+			seconds = (diff % 60) | 0;
+			minutes = minutes < 10 ? "0" + minutes : minutes;
+			seconds = seconds < 10 ? "0" + seconds : seconds;
+			display.textContent = minutes + ":" + seconds;
+			
+			// Deduct credit after the specified duration
+			if (!creditsDeducted && diff <= 0) {
+				console.log("Attempting to deduct credit...");
+				fetch('/auth/deduct_credit', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						"X-CSRFToken": csrfToken  // Include CSRF token in request header
+					}
+				})
+					.then(response => response.json())
+					.then(data => {
+						console.log("Credit deduction response:", data);
+						credits = data.credits;
+						document.getElementById('credits').textContent = credits;
+						if (credits <= 0) {
+							disableStartButton();
+						}
+					})
+					.catch(error => console.error('Error deducting credit:', error));
+				creditsDeducted = true;
+			}
+
+			if (diff <= 0) {
+				clearInterval(timerInterval);
+				display.textContent = "00:00";
+				disableStartButton();
+				alert('Time is up! Please re-select another persona to continue.');
+			}
+		}
+        timer();
+        timerInterval = setInterval(timer, 1000);
+    }    
         
 	// Extract the persona from the URL query parameter
-	    var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');  // Fetch CSRF token from meta tag
-		const urlParams = new URLSearchParams(window.location.search);
-		const persona = urlParams.get('persona');
-		document.getElementById('persona-name').innerText = persona;
-		function getCurrentTimestamp() {
-			const now = new Date();
-			const hours = now.getHours().toString().padStart(2, '0');
-			const minutes = now.getMinutes().toString().padStart(2, '0');
-			return `${hours}:${minutes}`;
-		}
+	var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');  // Fetch CSRF token from meta tag
+	const urlParams = new URLSearchParams(window.location.search);
+	const persona = urlParams.get('persona');
+	document.getElementById('persona-name').innerText = persona;
+	function getCurrentTimestamp() {
+		const now = new Date();
+		const hours = now.getHours().toString().padStart(2, '0');
+		const minutes = now.getMinutes().toString().padStart(2, '0');
+		return `${hours}:${minutes}`;
+	}
 
 		
 
 function startVoiceConversation() {
+    if (!timerStarted && credits > 0) {
+        let display = document.querySelector('#time');
+        startTimer(display);
+        timerStarted = true;
+        
+    }
+
+
     var recognition = new webkitSpeechRecognition();
     recognition.lang = 'hi-IN';
 
@@ -410,6 +495,14 @@ function showTranslation(button, message) {
             document.getElementById('chat-history').innerHTML = '';
             document.getElementById('message-input').value = '';
         }
+		function disableStartButton() {
+			const startButton = document.getElementById("startButton");
+			startButton.disabled = true;
+			startButton.style.backgroundColor = "#cccccc";
+			startButton.style.cursor = "not-allowed";
+		}
+
+		
     </script>
 		<nav>
 		<a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>

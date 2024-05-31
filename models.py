@@ -7,6 +7,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    credits = db.Column(db.Integer, default=10)  # Default 10 credits
 
     @property
     def is_active(self):

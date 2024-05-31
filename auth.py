@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, jsonify
 from flask_mail import Message
 from extensions import mail
 from flask_login import login_user, login_required, logout_user, current_user
@@ -89,6 +89,25 @@ def google_authorize():
         logging.error(f"An unexpected error occurred: {e}")
         flash("Authentication failed. Please try again.", 'error')
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/get_credits', methods=['GET'])
+@login_required
+def get_credits():
+    user = current_user
+    return jsonify({'credits': user.credits})
+
+@auth_bp.route('/deduct_credit', methods=['POST'])
+@login_required
+def deduct_credit():
+    user = current_user
+    if user.credits > 0:
+        user.credits -= 1
+        db.session.commit()
+        logging.info(f"Credit deducted for user {user.username}. Remaining credits: {user.credits}")
+    else:
+        logging.info(f"User {user.username} has no credits left.")
+    return jsonify({'credits': user.credits})
 
 
 
