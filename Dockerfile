@@ -25,4 +25,7 @@ RUN gunicorn --version
 EXPOSE 8000
 
 # Command to run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"]
+#CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"]
+
+# Run migrations as part of the container startup
+CMD ["sh", "-c", "flask db upgrade && gunicorn --bind 0.0.0.0:8000 main:app"]
