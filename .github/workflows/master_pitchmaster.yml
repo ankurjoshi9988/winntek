@@ -45,6 +45,11 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
             
+      # Ensure login to Azure Container Registry for deploy job
+      - name: Login to Azure Container Registry
+        run: |
+          echo "${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}" | docker login myregistry.azurecr.io -u ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} --password-stdin
+            
       # Pull the Docker image
       - name: Pull Docker image
         run: docker pull myregistry.azurecr.io/pitchmaster:latest
