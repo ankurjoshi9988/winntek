@@ -18,12 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Now copy the rest of your application files into the container
 COPY . .
 
-# Verify installation (for debugging purposes)
-RUN python -m flask --version
-
-# Set Flask app environment variable
-ENV FLASK_APP=main.py
-
 
 # Verify gunicorn installation
 RUN gunicorn --version

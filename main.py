@@ -10,7 +10,6 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import json
 import csv
-from flask_migrate import Migrate
 from knowledge import knowledge_bp
 import logging
 import site
@@ -29,10 +28,6 @@ from extensions import login_manager, csrf, mail, oauth, db
 
 
 
-
-
-
-
 load_dotenv()
 #os.getenv("GOOGLE_API_KEY")
 #genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -42,34 +37,27 @@ api_key=os.environ['GOOGLE_API_KEY']
 genai.configure(api_key=api_key)
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
 #llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True)
-env = os.getenv('FLASK_ENV', 'development')
+#env = os.getenv('FLASK_ENV', 'development')
 executor = ThreadPoolExecutor()
 
-app = Flask(__name__)
-if env == 'production':
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///production_db.sqlite')
-    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
-    app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
-    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-    app.config['MAIL_USE_TLS'] = True
-    app.config['MAIL_USE_SSL'] = False
-else:
-    app.config['SECRET_KEY'] = 'a_default_secret_for_dev'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'  # Development database file
-    app.config['MAIL_SERVER'] = 'sandbox.smtp.mailtrap.io'
-    app.config['MAIL_PORT'] = 2525
-    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-    app.config['MAIL_USE_TLS'] = True
-    app.config['MAIL_USE_SSL'] = False
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Sessions expire after 30 minutes of inactivity
 
-# Initialize OAuth with the app
-oauth.init_app(app)
+app = Flask(__name__)
+#env = os.getenv('FLASK_ENV', 'development')
+# Configure app with local database
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+
+# Additional configuration common to all environments
+app.config.update({
+    'MAIL_SERVER': os.getenv('MAIL_SERVER', 'sandbox.smtp.mailtrap.io'),
+    'MAIL_PORT': int(os.getenv('MAIL_PORT', 2525)),
+    'MAIL_USERNAME': os.getenv('MAIL_USERNAME'),
+    'MAIL_PASSWORD': os.getenv('MAIL_PASSWORD'),
+    'MAIL_DEFAULT_SENDER': os.getenv('MAIL_DEFAULT_SENDER'),
+    'MAIL_USE_TLS': True,
+    'MAIL_USE_SSL': False,
+    'PERMANENT_SESSION_LIFETIME': timedelta(minutes=30)
+})
 
 # Configuration for Google OAuth
 oauth.register(
@@ -85,15 +73,13 @@ oauth.register(
     client_kwargs={'scope': 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'}
 )
 
-# Initialize extensions with the app
+# Initialize extensions
 db.init_app(app)
-with app.app_context():
-    db.create_all()  # This will create the database file using SQLAlchemy
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 csrf.init_app(app)
 mail.init_app(app)
-migrate = Migrate(app, db)
+oauth.init_app(app)
 
 # Initialize auth module
 init_auth(oauth)
@@ -101,6 +87,9 @@ init_auth(oauth)
 # Register Blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp, url_prefix='/admin')
+
+
+#app = create_app()
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
