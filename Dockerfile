@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Now copy the rest of your application files into the container
 COPY . .
 
+# Set Flask app environment variable
+ENV FLASK_APP=main.py
+
 # Verify gunicorn installation
 RUN gunicorn --version
 
@@ -25,7 +28,4 @@ RUN gunicorn --version
 EXPOSE 8000
 
 # Command to run the application
-#CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"]
-
-# Run migrations as part of the container startup
-CMD ["sh", "-c", "flask db upgrade && gunicorn --bind 0.0.0.0:8000 main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"]
