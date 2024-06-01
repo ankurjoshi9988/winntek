@@ -38,11 +38,26 @@ jobs:
     needs: build
 
     steps:
+      - uses: actions/checkout@v4
       # Login to Azure
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+            
+      # Pull the Docker image
+      - name: Pull Docker image
+        run: docker pull myregistry.azurecr.io/pitchmaster:latest
+
+      # Run database migrations inside the Docker container
+      - name: Run database migrations
+        run: |
+          docker run --rm \
+            -e FLASK_APP=main.py \
+            -e FLASK_ENV=production \
+            -e SQLALCHEMY_DATABASE_URI="sqlite:///production_db.sqlite" \
+            myregistry.azurecr.io/pitchmaster:latest \
+            flask db upgrade
 
       # Configure Azure Web App Container
       - name: Configure Azure Web App Container
@@ -63,12 +78,3 @@ jobs:
           images: mmyregistry.azurecr.io/pitchmaster:latest
           resource-group: 'InsuBuddy'
           slot-name: 'production'
-
-
-      - name: Run database migrations
-        env:
-          FLASK_APP: main.py
-          FLASK_ENV: production
-          SQLALCHEMY_DATABASE_URI: "sqlite:///production_db.sqlite"
-        run: |
-          python -m flask db upgrade
