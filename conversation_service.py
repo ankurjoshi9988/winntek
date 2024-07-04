@@ -76,8 +76,12 @@ def close_conversation(conversation_id):
     if not conversation:
         return "No conversation found with the given ID."
 
+    existing_feedback = Feedback.query.filter_by(conversation_id=conversation_id).first()
+    if existing_feedback:
+        return existing_feedback.content  # Return the existing feedback if it exists
+
     try:
-        feedback_content = asyncio.run(generate_feedback(conversation))
+        feedback_content = await generate_feedback(conversation)
         feedback = Feedback(conversation_id=conversation_id, content=feedback_content)
         db.session.add(feedback)
         db.session.commit()
@@ -85,6 +89,7 @@ def close_conversation(conversation_id):
     except Exception as e:
         db.session.rollback()
         return f"An error occurred while closing the conversation: {str(e)}"
+
 
 
 
