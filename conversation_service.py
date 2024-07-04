@@ -60,7 +60,7 @@ async def generate_feedback(conversation):
 
             individual_response = await llm_invoke(individual_prompt)
             feedback_text = individual_response.content if individual_response else "Could not generate individual feedback at this time."
-            individual_feedback_list.append(f"Agent's response: {message.content}\nFeedback: {feedback_text}")
+            individual_feedback_list.append(f"Agent's response: {message.content}\nFeedback: {feedback_text} in hindi")
 
     combined_feedback = f"{overall_feedback}\n\nIndividual Feedback:\n" + "\n\n".join(individual_feedback_list)
 
