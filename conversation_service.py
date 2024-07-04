@@ -41,8 +41,8 @@ async def generate_feedback(conversation):
         print(f"Processing message: sender={sender}, content={message.content}")  # Debugging line
 
     overall_prompt = (
-        "Based on the following conversation between an insurance agent and a customer, provide feedback on the agent's performance. "
-        "The feedback should be categorized as 'Good' or 'Needs Improvement' and should include specific comments on how the agent handled the conversation.\n\n"
+        "Based on the following conversation between an insurance agent and a customer, provide feedback in hindi on the agent's performance. "
+        "The feedback should be categorized either 'Good' or 'Needs Improvement' and should include specific comments on how the agent handled the conversation.\n\n"
         f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
     )
 
@@ -53,7 +53,7 @@ async def generate_feedback(conversation):
     for message in conversation.messages:
         if message.sender == 'user':
             individual_prompt = (
-                "Provide feedback on the following response from the agent. "
+                "Provide feedback in hindi on the following response from the agent. "
                 "Indicate whether it was 'Good' or 'Needs Improvement' and provide specific comments on how it could be improved if needed.\n\n"
                 f"Agent's response: {message.content}\n\nFeedback:"
             )
