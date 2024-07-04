@@ -42,7 +42,7 @@ async def generate_feedback(conversation):
 
     overall_prompt = (
         "Based on the following conversation between an insurance agent and a customer, provide feedback in hindi on the agent's performance. "
-        "The feedback should be categorized either 'Good' or 'Needs Improvement' and should include specific comments on how the agent handled the conversation.\n\n"
+        "The feedback should be categorized either 'Positives' or 'Needs Improvement' and should include specific comments on how the agent handled the conversation.  These categories should be in english.\n\n"
         f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
     )
 
@@ -54,7 +54,7 @@ async def generate_feedback(conversation):
         if message.sender == 'user':
             individual_prompt = (
                 "Provide feedback in hindi on the following response from the agent. "
-                "Indicate whether it was 'Good' or 'Needs Improvement' and provide specific comments on how it could be improved if needed.\n\n"
+                "Indicate whether it was 'Positive' or 'Needs Improvement' and provide specific comments on how it could be improved if needed. These indicators should be in english.\n\n"
                 f"Agent's response: {message.content}\n\nFeedback:"
             )
 
