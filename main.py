@@ -1,14 +1,16 @@
 import os
 import uuid
 import asyncio
-from flask import Flask, request, render_template, jsonify, send_from_directory, redirect, url_for
-from flask_login import login_required
+from flask import Flask, request, render_template, jsonify, send_from_directory, redirect, url_for, session
+from flask_login import login_required, current_user
 from datetime import timedelta
+from conversation_service import start_conversation, add_message, close_conversation
 import re
 from gtts import gTTS
 import google.generativeai as genai
 from dotenv import load_dotenv
 import json
+
 import csv
 from knowledge import knowledge_bp
 import logging
@@ -24,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 from auth import auth_bp, init_auth
 from admin import admin_bp
 from authlib.integrations.flask_client import OAuth
+from models import User, Conversation, Message, Feedback
 from extensions import login_manager, csrf, mail, oauth, db
 
 
@@ -315,7 +318,15 @@ async def translation():
 
 @app.route('/start_conversation/<persona>', methods=['POST'])
 @login_required
-async def start_conversation(persona):
+async def start_conversation1(persona):
+    # Initialize or retrieve the conversation
+    # Check if there's an ongoing conversation
+    conversation_id = session.get('conversation_id')
+    if not conversation_id:
+        # Generate a new conversation_id if not found in session
+        conversation_id = start_conversation(current_user.id, persona)
+        session['conversation_id'] = conversation_id
+    print(f"Generated conversation_id: {conversation_id}")  # Add this line
     agent_message = request.json.get('message')
     audio_file_name = str(uuid.uuid4()) + ".mp3"
 
@@ -390,8 +401,46 @@ async def start_conversation(persona):
     return jsonify({
         "text": customer_message,
         "english_message": english_message,
-        "audio": f"/static/{audio_file_name}"
+        "audio": f"/static/{audio_file_name}",
+        "conversation_id": conversation_id
     })
+
+
+@app.route('/add_message', methods=['POST'])
+@login_required
+def add_message_route():
+    data = request.json
+    conversation_id = data.get('conversation_id')
+    sender = data.get('sender')
+    content = data.get('content')
+    if not conversation_id or not sender or not content:
+        return jsonify({'error': 'Invalid request'}), 400
+
+    add_message(conversation_id, sender, content)
+    return jsonify({'status': 'Message added'}), 200
+
+
+
+@app.route('/close_conversation', methods=['POST'])
+@login_required
+def close_conversation_route():
+    data = request.json
+    conversation_id = data['conversation_id']
+    if not conversation_id:
+        return jsonify({'error': 'conversation_id is required'}), 400
+
+    feedback = close_conversation(conversation_id)
+    if feedback is None:
+        return jsonify({'error': 'Failed to retrieve feedback'}), 500
+
+    return jsonify({'status': 'conversation closed', 'feedback': feedback}), 200
+
+
+
+
+
+
+
 
 
 @app.route('/remove_audio_file/<filename>', methods=['POST'])

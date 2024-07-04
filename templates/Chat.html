@@ -5,416 +5,468 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Insurance Chatbot</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-	<meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-		.timer {
-			font-size: 16px;
-			font-weight: bold;
-		}
-		body {
-			font-family: Arial, sans-serif;
-			margin: 0;
-			padding: 0;
-			background-color: #f1f1f1;
-			}
-
-	.container {
-		max-width: 100%;
-		max-height: 100%;
-		margin: 0 auto;
-		padding: 5px;
-		background-color: #fff;
-		border-radius: 10px;
-		box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-	}
-
-
-	.header {
-		text-align: left;
-		margin-bottom: 10px;
-		font-size: 12px; /* Adjust font size */
-	}
-	button:disabled {
-		background-color: #cccccc; /* Change the background color */
-		color: #666666;           /* Change the text color */
-		cursor: not-allowed;      /* Change the cursor to not-allowed */
-		pointer-events: none;     /* Disable pointer events */
-	}
-	.back-button {
-        cursor: pointer;
-        margin-right: 10px;
-    }
-
-	.chat-history {		
-		overflow-y: auto; /* Enable scrolling if content overflows */
-		height: 65vh; /* Set height to half the screen */
-		padding: 10px;
-		border: 1px solid #ccc;
-		border-radius: 5px;
-		background-color: #f9f9f9;
-		margin-bottom: 10px;
-		bottom: 100px; /* Adjust bottom based on the size of other elements like a navigation bar */
-	}
-	
-
-
-	.button-container {
-		display: flex;
-		justify-content: space-between;
-		flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
-	}
-
-	.send-button,
-	.clear-chat-button {
-		flex: 0 0 48%; /* Adjust button width for better alignment */
-		margin-bottom: 10px; /* Add margin between buttons */
-		padding: 15px; /* Increased padding for better touchability */
-		background-color: #007bff;
-		color: #fff;
-		border: none;
-		border-radius: 5px;
-		cursor: pointer;
-	}
-
-	.clear-chat-button {
-		background-color: #dc3545;
-	}
-
-	.thumbs {
-		float: right;
-		clear: both;
-		/* Other styles for the thumbs icons */
-	}
-
-	.thumbs button {
-		background: none;
-		border: none;
-		cursor: pointer;
-	}
-
-	.thumbs button img {
-		width: 17px;
-		height: 17px;
-	}
-	.agent-message {
-		text-align: left;
-		font-size: 12px; /* Adjust font size */
-		padding: 3px; /* Adjust padding */
-	}
-
-	.message-wrapper {
-		overflow: auto; /* Ensure the wrapper contains floating elements */
-	}
-
-	.customer-message {
-		float: right;
-		clear: both;		
-		font-size: 12px; /* Adjust font size */
-		padding: 3px; /* Adjust padding */
-	}
-
-	.thumbs {
-		float: right;
-		clear: both;
-		/* Other styles for the thumbs icons */
-	}
-
-
-	.message-content {
-		display: inline-block;
-		background-color: #f2f2f2;		
-		border-radius: 10px;
-		margin-bottom: 5px; /* Add margin between buttons */
-	}
-	.message-content.agent-message {
-		background-color: #f0f0f0;
-		color: #333;
-		padding: 10px;
-		border-radius: 10px;
-		margin-bottom: 5px; /* Add margin at the bottom */
-		margin-right: 20%; /* Add margin to the right side */
-	}
-
-	.message-content.customer-message {
-		background-color: #f0f0f0;
-		color: #333;
-		padding: 10px;
-		border-radius: 10px;
-		margin-bottom: 5px; /* Add margin at the bottom */
-		margin-left: 20%; /* Add margin to the left side */
-	}
-
-
-	.message-timestamp {
-		font-size: 12px;
-		color: #666;
-	}
-	nav {
-		font-family: 'Roboto', sans-serif;
-		display: flex;
-		justify-content: space-around;
-		align-items: center;
-		background: #333;
-		padding: 10px 0;
-		position: fixed;
-		bottom: 0;
-		width: 100%;
-	}
-
-		nav a {
-			color: white;
-			text-decoration: none;
-			text-align: center;
-			font-size: 9px;
-			flex: 1 1 0; /* Ensures equal distribution and alignment */
+		#feedback-container {
+			margin-bottom: 80px; /* Adjust the value as needed */
+			padding: 10px;
+			background-color: #f9f9f9;
+			border-radius: 10px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+			max-height: 30vh;
+			overflow-y: auto;
 		}
 
-		nav a img {
-			display: block; /* Centers image in its flex container */
-			margin: 0 auto;
-			width: 24px;
-			height: 24px;
-		}
-		nav a:hover {
-			background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
-			transition: background-color 0.3s ease; /* Smooth transition */
+		.feedback-message {
+			padding: 10px;
+			margin-bottom: 10px;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			background-color: #fff;
 		}
 
+        .timer {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
 
+        .container {
+            max-width: 100%;
+            max-height: 100%;
+            margin: 0 auto;
+            padding: 5px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: left;
+            margin-bottom: 10px;
+            font-size: 12px; /* Adjust font size */
+        }
+        button:disabled {
+            background-color: #cccccc; /* Change the background color */
+            color: #666666;           /* Change the text color */
+            cursor: not-allowed;      /* Change the cursor to not-allowed */
+            pointer-events: none;     /* Disable pointer events */
+        }
+        .back-button {
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .chat-history {        
+            overflow-y: auto; /* Enable scrolling if content overflows */
+            height: 65vh; /* Set height to half the screen */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+            bottom: 100px; /* Adjust bottom based on the size of other elements like a navigation bar */
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+        }
+
+        .send-button,
+        .clear-chat-button {
+            flex: 0 0 48%; /* Adjust button width for better alignment */
+            margin-bottom: 10px; /* Add margin between buttons */
+            padding: 15px; /* Increased padding for better touchability */
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .clear-chat-button {
+            background-color: #dc3545;
+        }
+
+        .thumbs {
+            float: right;
+            clear: both;
+            /* Other styles for the thumbs icons */
+        }
+
+        .thumbs button {
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .thumbs button img {
+            width: 17px;
+            height: 17px;
+        }
+        .agent-message {
+            text-align: left;
+            font-size: 12px; /* Adjust font size */
+            padding: 3px; /* Adjust padding */
+        }
+
+        .message-wrapper {
+            overflow: auto; /* Ensure the wrapper contains floating elements */
+        }
+
+        .customer-message {
+            float: right;
+            clear: both;        
+            font-size: 12px; /* Adjust font size */
+            padding: 3px; /* Adjust padding */
+        }
+
+        .thumbs {
+            float: right;
+            clear: both;
+            /* Other styles for the thumbs icons */
+        }
+
+        .message-content {
+            display: inline-block;
+            background-color: #f2f2f2;        
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin between buttons */
+        }
+        .message-content.agent-message {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin at the bottom */
+            margin-right: 20%; /* Add margin to the right side */
+        }
+
+        .message-content.customer-message {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin at the bottom */
+            margin-left: 20%; /* Add margin to the left side */
+        }
+
+        .message-timestamp {
+            font-size: 12px;
+            color: #666;
+        }
+        nav {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #333;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 9px;
+            flex: 1 1 0; /* Ensures equal distribution and alignment */
+        }
+
+        nav a img {
+            display: block; /* Centers image in its flex container */
+            margin: 0 auto;
+            width: 24px;
+            height: 24px;
+        }
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        
         <div class="persona-details" id="persona-details">
             <div class="header">
-			
-			<h1 id="persona-header"><a href="/rehearse.html">Back </a> Main Chat with <span id="persona-name"></span></h1>
-			<div class="timer">Time left: <span id="time">05:00</span></div>
-			<span class="credits">Credits: <span id="credits"></span></span>
-            </div> 
-            <div class="chat-history" id="chat-history">
-				
-				</div>
-			</div>
-			<div class="button-container">                
-                <button id="startButton"  class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
-				<button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
-            </div>            
+                <h1 id="persona-header"><a href="/rehearse.html">Back </a> Main Chat with <span id="persona-name"></span></h1>
+                <div class="timer">Time left: <span id="time">05:00</span></div>
+                <span class="credits">Credits: <span id="credits"></span></span>
+            </div>
+            <div class="chat-history" id="chat-history"></div>
         </div>
-		<audio id="audio-player" controls style="display: none;"></audio>
+        <div class="button-container">                
+            <button id="startButton" class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
+            <button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
+        </div>            
+        <div id="feedback-container"></div> <!-- Feedback container -->
+        <audio id="audio-player" controls style="display: none;"></audio>
     </div>
 
     <script>
-	// Timer functionality
-    let timerStarted = false;
-	let timerInterval;
-	let credits;
-	
-	document.addEventListener('DOMContentLoaded', function () {
-    // Fetch user credits when the page loads
-		fetch('/auth/get_credits')
-			.then(response => response.json())
-			.then(data => {
-				credits = data.credits;
-				document.getElementById('credits').textContent = credits;
-				if (credits <= 0) {
-					document.getElementById("startButton").disabled = true;
-					document.getElementById("startButton").style.backgroundColor = "#cccccc";
-					document.getElementById("startButton").style.cursor = "not-allowed";
-				}
-			});
-	});
-	
-    
-    function startTimer(display) {
-		let duration = 60 * 5; // 5 minute in seconds, change number as per your requiremet of minutes.
-		let start = Date.now();		
-		let diff, minutes, seconds;
-		let creditsDeducted = false; // Track if credits have been deducted		
-
-        function timer() {
-			diff = duration - (((Date.now() - start) / 1000) | 0);
-			minutes = (diff / 60) | 0;
-			seconds = (diff % 60) | 0;
-			minutes = minutes < 10 ? "0" + minutes : minutes;
-			seconds = seconds < 10 ? "0" + seconds : seconds;
-			display.textContent = minutes + ":" + seconds;
-			
-			// Deduct credit after the specified duration
-			if (!creditsDeducted && diff <= 0) {
-				console.log("Attempting to deduct credit...");
-				fetch('/auth/deduct_credit', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						"X-CSRFToken": csrfToken  // Include CSRF token in request header
-					}
-				})
-					.then(response => response.json())
-					.then(data => {
-						console.log("Credit deduction response:", data);
-						credits = data.credits;
-						document.getElementById('credits').textContent = credits;
-						if (credits <= 0) {
-							disableStartButton();
-						}
-					})
-					.catch(error => console.error('Error deducting credit:', error));
-				creditsDeducted = true;
-			}
-
-			if (diff <= 0) {
-				clearInterval(timerInterval);
-				display.textContent = "00:00";
-				disableStartButton();
-				alert('Time is up! Please re-select another persona to continue.');
-			}
-		}
-        timer();
-        timerInterval = setInterval(timer, 1000);
-    }    
-        
-	// Extract the persona from the URL query parameter
-	var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');  // Fetch CSRF token from meta tag
-	const urlParams = new URLSearchParams(window.location.search);
-	const persona = urlParams.get('persona');
-	document.getElementById('persona-name').innerText = persona;
-	function getCurrentTimestamp() {
-		const now = new Date();
-		const hours = now.getHours().toString().padStart(2, '0');
-		const minutes = now.getMinutes().toString().padStart(2, '0');
-		return `${hours}:${minutes}`;
-	}
-
-		
-
-function startVoiceConversation() {
-    if (!timerStarted && credits > 0) {
-        let display = document.querySelector('#time');
-        startTimer(display);
-        timerStarted = true;
-        
-    }
-
-
-    var recognition = new webkitSpeechRecognition();
-    recognition.lang = 'hi-IN';
-
-    recognition.onresult = function(event) {
-        var transcript = event.results[0][0].transcript;
-		
-
-        // Make AJAX request to get the translated message first
-        $.ajax({
-            url: '/translation',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ message: transcript }),
+		$.ajaxSetup({
 			headers: {
-                "X-CSRFToken": csrfToken  // Include CSRF token in request header
-            },
-            success: function(data) {
-                // Extract the Hindi message from the response
-                const hindiMessage = data.hindi_message;
-                
-                // Display the translated message alongside user's input
-                document.getElementById('chat-history').innerHTML += `
-                    <div class="message-wrapper">
-						<div class="message-content agent-message">    
-							<p>${transcript}</p>
-							<button class="show-english" data-english-message="${hindiMessage}">Show English</button>
-							<span class="message-timestamp">${getCurrentTimestamp()}</span>
-						</div>
-					</div>
+				"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+			}
+		});
 
-                `;
-                // Automatically scroll to the bottom of the chat history
-                var chatHistory = document.getElementById('chat-history');
-                chatHistory.scrollTop = chatHistory.scrollHeight;
+        let timerStarted = false;
+        let timerInterval;
+        let credits;
 
-                // After displaying translated message, make AJAX request to start conversation with transcript
-                $.ajax({
-                    url: "/start_conversation/" + persona, // Update the URL accordingly
-                    type: "POST",
-                    data: JSON.stringify({ message: transcript }),
-                    contentType: "application/json",
-					headers: {
-						"X-CSRFToken": csrfToken  // Include CSRF token in request header
-					},
-                    success: function(response) {
-						const englishMessage = response.english_message
-						console.log("Extracted English Message:", englishMessage);
-                        console.log("System Response:", response.text);
-                        if (response.audio) {
-                            playAudio(response.audio);
-                        }
-                        if (response.text) {
-							
-                            // Display system's English response
-                            document.getElementById('chat-history').innerHTML += `
-                                <div class="message-wrapper">
-                                    <div class="message-content customer-message">
-										<p>${response.text}</p>
-                                        <button class="show-english" data-english-message="${englishMessage}">Show English</button>
-                                        <span class="message-timestamp">${getCurrentTimestamp()}</span>
-                                    </div>
-                                    <div class="thumbs">
-                                        <button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
-                                        <button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
-                                    </div>
-                                </div>
-                            `;
-                            // Automatically scroll to the bottom of the chat history
-                            chatHistory.scrollTop = chatHistory.scrollHeight;
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error:", error);
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('/auth/get_credits')
+                .then(response => response.json())
+                .then(data => {
+                    credits = data.credits;
+                    document.getElementById('credits').textContent = credits;
+                    if (credits <= 0) {
+                        document.getElementById("startButton").disabled = true;
+                        document.getElementById("startButton").style.backgroundColor = "#cccccc";
+                        document.getElementById("startButton").style.cursor = "not-allowed";
                     }
                 });
-            },
-            error: function(xhr, status, error) {
-                console.error('Error:', error);
+        });
+
+        function startTimer(display) {
+            let duration = 60 * 5;
+            let start = Date.now();
+            let diff, minutes, seconds;
+            let creditsDeducted = false;
+
+            function timer() {
+                diff = duration - (((Date.now() - start) / 1000) | 0);
+                minutes = (diff / 60) | 0;
+                seconds = (diff % 60) | 0;
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+                display.textContent = minutes + ":" + seconds;
+
+                if (!creditsDeducted && diff <= 0) {
+                    console.log("Attempting to deduct credit...");
+                    fetch('/auth/deduct_credit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            "X-CSRFToken": csrfToken
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Credit deduction response:", data);
+                        credits = data.credits;
+                        document.getElementById('credits').textContent = credits;
+                        if (credits <= 0) {
+                            disableStartButton();
+                            closeConversation();
+                        }
+                    })
+                    .catch(error => console.error('Error deducting credit:', error));
+                    creditsDeducted = true;
+                }
+
+                if (diff <= 0) {
+                    clearInterval(timerInterval);
+                    display.textContent = "00:00";
+                    disableStartButton();
+                    closeConversation();
+                    alert('Time is up! Please re-select another persona to continue.');
+                }
+            }
+            timer();
+            timerInterval = setInterval(timer, 1000);
+        }
+
+        var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const urlParams = new URLSearchParams(window.location.search);
+        const persona = urlParams.get('persona');
+        document.getElementById('persona-name').innerText = persona;
+
+        function getCurrentTimestamp() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        const closingStatements = ["नेक्स्ट मीटिंग", "I'll be in touch soon", "follow up", "अगली मीटिंग","next time", "will get back", "next meeting", "फॉलो-अप मीटिंग", "I'll compile all the details","can finalize everything in our next meeting", "It's been a pleasure discussing your needs", "I'll be back with a personalized plan soon", "Take care", "Have a great day", "bye", "I'll prepare the documents", "I'll get the customized policy ready", "goodbye","जल्द ही आपसे संपर्क करूँगा", "आपका दिन शुभ हो", "मैं दस्तावेज़ तैयार करूंगा","हम इसे अगली बैठक में पूरा करेंगे", "अलविदा", "विदा", "बाय","फिर मिलेंगे","अब चलता हूँ"];
+
+        function detectClosingStatement(transcript) {
+            const lowerTranscript = transcript.toLowerCase();
+            return closingStatements.some(statement => lowerTranscript.includes(statement));
+        }
+		
+		//let silenceTimeout;
+
+        function startVoiceConversation() {
+            if (!timerStarted && credits > 0) {
+                let display = document.querySelector('#time');
+                startTimer(display);
+                timerStarted = true;
+            }
+
+            var recognition = new webkitSpeechRecognition();
+            recognition.lang = 'hi-IN';
+			recognition.continuous = true; // Keep recording until explicitly stopped
+
+            recognition.onresult = function(event) {
+                var transcript = event.results[0][0].transcript;
+
+                $.ajax({
+                    url: '/translation',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ message: transcript }),
+                    headers: {
+                        "X-CSRFToken": csrfToken
+                    },
+                    success: function(data) {
+                        const hindiMessage = data.hindi_message;
+
+                        document.getElementById('chat-history').innerHTML += `
+                            <div class="message-wrapper">
+                                <div class="message-content agent-message">    
+                                    <p>${transcript}</p>
+                                    <button class="show-english" data-english-message="${hindiMessage}">Show English</button>
+                                    <span class="message-timestamp">${getCurrentTimestamp()}</span>
+                                </div>
+                            </div>
+                        `;
+
+                        var chatHistory = document.getElementById('chat-history');
+                        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+                        addMessage('user', transcript);
+
+                        if (closingStatements.some(statement => transcript.includes(statement))) {
+                            disableStartButton();
+                            closeConversation();
+                            return;
+                        }
+
+                        $.ajax({
+                            url: "/start_conversation/" + persona,
+                            type: "POST",
+                            data: JSON.stringify({ message: transcript }),
+                            contentType: "application/json",
+                            headers: {
+                                "X-CSRFToken": csrfToken
+                            },
+                            success: function(response) {
+                                if (response.conversation_id) {
+                                    sessionStorage.setItem('conversation_id', response.conversation_id);
+                                } else {
+                                    console.error("No conversation_id in response");
+                                }
+                                const englishMessage = response.english_message;
+                                console.log("Extracted English Message:", englishMessage);
+                                console.log("System Response:", response.text);
+                                if (response.audio) {
+                                    playAudio(response.audio);
+                                }
+                                if (response.text) {
+                                    document.getElementById('chat-history').innerHTML += `
+                                        <div class="message-wrapper">
+                                            <div class="message-content customer-message">
+                                                <p>${response.text}</p>
+                                                <button class="show-english" data-english-message="${englishMessage}">Show English</button>
+                                                <span class="message-timestamp">${getCurrentTimestamp()}</span>
+                                            </div>
+                                            <div class="thumbs">
+                                                <button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
+                                                <button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
+                                            </div>
+                                        </div>
+                                    `;
+                                    addMessage('system', response.text);
+
+                                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Error:", error);
+                            }
+                        });
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
+                    }
+                });
+            };
+			// Reset the silence timeout
+			//silenceTimeout = setTimeout(function() {
+				//recognition.stop();
+			//}, 2000); // 2 seconds of silence
+
+            recognition.start();
+        }
+
+        document.getElementById('chat-history').addEventListener('click', function(event) {
+            if (event.target && event.target.matches('.show-english')) {
+                var englishMessage = event.target.dataset.englishMessage;
+                showTranslation(event.target, englishMessage);
+            } else if (event.target && event.target.matches('.show-hindi')) {
+                var hindiMessage = event.target.dataset.hindiMessage;
+                showTranslation(event.target, hindiMessage);
             }
         });
-    };
 
-    recognition.start();
-}
+        function showTranslation(button, message) {
+            button.style.display = 'none';
+            var pTag = document.createElement('p');
+            pTag.textContent = message;
+            button.parentNode.insertBefore(pTag, button.nextSibling);
+        }
 
+        function thumbsUp(agentMessage, customerMessage) {
+            sendFeedback(agentMessage, customerMessage, 'positive');
+        }
 
-// Attach click event listener to the chat history
-document.getElementById('chat-history').addEventListener('click', function(event) {
-    // Check if the clicked element is a "Show English" button
-    if (event.target && event.target.matches('.show-english')) {
-        var englishMessage = event.target.dataset.englishMessage;
-        showTranslation(event.target, englishMessage);
-    } 
-    // Check if the clicked element is a "Show Hindi" button
-    else if (event.target && event.target.matches('.show-hindi')) {
-        var hindiMessage = event.target.dataset.hindiMessage;
-        showTranslation(event.target, hindiMessage);
-    }
-});
+        function thumbsDown(agentMessage, customerMessage) {
+            sendFeedback(agentMessage, customerMessage, 'negative');
+        }
 
-function showTranslation(button, message) {
-    // Hide the button
-    button.style.display = 'none';
+        function sendFeedback(agentMessage, customerMessage, feedback) {
+            var feedbackData = {
+                agent_message: agentMessage,
+                customer_message: customerMessage,
+                feedback: feedback
+            };
 
-    // Replace the button with the message
-    var pTag = document.createElement('p');
-    pTag.textContent = message;
-    button.parentNode.insertBefore(pTag, button.nextSibling);
-}
+            $.ajax({
+                url: "/save_feedback",
+                type: "POST",
+                data: JSON.stringify(feedbackData),
+                contentType: "application/json",
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    console.log("Feedback saved successfully:", response);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error saving feedback:", error);
+                }
+            });
+        }
 
-
-		
-		function removeAudioFile(audioUrl) {
+        function removeAudioFile(audioUrl) {
             var filename = audioUrl.split('/').pop();
             $.ajax({
                 url: "/remove_audio_file/" + filename,
                 type: "POST",
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
                 success: function(response) {
                     console.log(response);
                 },
@@ -424,69 +476,15 @@ function showTranslation(button, message) {
             });
         }
 
-		function thumbsUp(agentMessage, customerMessage) {
-			sendFeedback(agentMessage, customerMessage, 'positive');
-		}
-
-		function thumbsDown(agentMessage, customerMessage) {
-			sendFeedback(agentMessage, customerMessage, 'negative');
-		}
-
-		function sendFeedback(agentMessage, customerMessage, feedback) {
-			var feedbackData = {
-				agent_message: agentMessage,
-				customer_message: customerMessage,
-				feedback: feedback
-			};
-
-			$.ajax({
-				url: "/save_feedback",
-				type: "POST",
-				data: JSON.stringify(feedbackData), // Ensure the data is properly formatted as JSON
-				contentType: "application/json",
-					headers: {
-						"X-CSRFToken": csrfToken  // Include CSRF token in request header
-					},
-				success: function(response) {
-					console.log("Feedback saved successfully:", response);
-					// You can perform any additional actions here, such as updating UI or showing a confirmation message
-				},
-				error: function(xhr, status, error) {
-					console.error("Error saving feedback:", error);
-					// Handle errors gracefully, such as displaying an error message to the user
-				}
-			});
-		}
-
-
-
         function playAudio(audioUrl) {
             var audioPlayer = document.getElementById("audio-player");
             audioPlayer.src = audioUrl;
             audioPlayer.play();
-			// When audio playback ends, remove the audio file
-			audioPlayer.addEventListener("ended", function() {
-			removeAudioFile(audioUrl);
-			});
+            audioPlayer.addEventListener("ended", function() {
+                removeAudioFile(audioUrl);
+            });
         }
-		
-		function removeAudioFile(audioUrl) {
-			var filename = audioUrl.split('/').pop(); // Extract filename from URL
-			$.ajax({
-				url: "/remove_audio_file/" + filename,
-				type: "POST",
-				headers: {
-					"X-CSRFToken": csrfToken  // Include CSRF token in request header
-				},
-				success: function(response) {
-					console.log(response);
-				},
-				error: function(xhr, status, error) {
-					console.error("Error removing audio file:", error);
-				}
-			});
-		}
-		// Go back function
+
         function goBack() {
             window.location.href = "/static/rehears.html";
         }
@@ -495,19 +493,102 @@ function showTranslation(button, message) {
             document.getElementById('chat-history').innerHTML = '';
             document.getElementById('message-input').value = '';
         }
-		function disableStartButton() {
-			const startButton = document.getElementById("startButton");
-			startButton.disabled = true;
-			startButton.style.backgroundColor = "#cccccc";
-			startButton.style.cursor = "not-allowed";
+
+        function disableStartButton() {
+            const startButton = document.getElementById("startButton");
+            startButton.disabled = true;
+            startButton.style.backgroundColor = "#cccccc";
+            startButton.style.cursor = "not-allowed";
+        }
+
+        function addMessage(sender, content) {
+            var conversation_id = sessionStorage.getItem('conversation_id');
+            console.log("Retrieved conversation_id:", conversation_id);
+            if (!conversation_id) {
+                console.error('No conversation ID found');
+                return;
+            }
+
+            $.ajax({
+                url: '/add_message',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    conversation_id: conversation_id,
+                    sender: sender,
+                    content: content
+                }),
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    console.log('Message added:', response);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error adding message:', error);
+                }
+            });
+        }
+
+        function closeConversation() {
+			var conversation_id = sessionStorage.getItem('conversation_id');
+			var csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+			if (!conversation_id) {
+				alert('No conversation ID found, unable to close the conversation properly.');
+				console.error('No conversation ID found');
+				return;
+			}
+
+			// Show the loading indicator
+			document.getElementById('loading-indicator').style.display = 'block';
+
+			$.ajax({
+				url: '/close_conversation',
+				type: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({ conversation_id: conversation_id }),
+				headers: {
+					"X-CSRFToken": csrfToken
+				},
+				success: function(response) {
+					console.log('Conversation closed:', response);
+					// Hide the loading indicator
+					document.getElementById('loading-indicator').style.display = 'none';
+					if (response.feedback) {
+						showFeedback(response.feedback);
+					}
+				},
+				error: function(xhr, status, error) {
+					// Hide the loading indicator
+					document.getElementById('loading-indicator').style.display = 'none';
+					alert('Failed to close the conversation: ' + error);
+					console.error('Error closing conversation:', error);
+				}
+			});
 		}
 
-		
+
+        function showFeedback(feedback) {
+			const feedbackContainer = document.getElementById('feedback-container');
+			const feedbackMessages = feedback.split('\n\n');
+
+			feedbackContainer.innerHTML = ''; // Clear previous feedback
+
+			feedbackMessages.forEach(message => {
+				const feedbackMessage = document.createElement('div');
+				feedbackMessage.className = 'feedback-message';
+				feedbackMessage.innerText = message;
+				feedbackContainer.appendChild(feedbackMessage);
+			});
+		}
+
     </script>
-		<nav>
-		<a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
+    <nav>
+        <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
         <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
-        <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>        <
+        <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
     </nav>
+	<div id="loading-indicator" style="display: none;">Evaluating conversation, please wait...</div>
 </body>
 </html>

@@ -11,10 +11,8 @@ class User(UserMixin, db.Model):
 
     @property
     def is_active(self):
-        # Assume all users are active in this basic example
         return True
 
-    # Optional: Define these properties if you want more fine-grained control
     @property
     def is_authenticated(self):
         return True
@@ -25,3 +23,28 @@ class User(UserMixin, db.Model):
 
     def get_id(self):
         return self.id
+
+class Conversation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    persona = db.Column(db.String(100), nullable=False)  # Add the persona field
+    user = db.relationship('User', backref='conversations', lazy=True)
+    messages = db.relationship('Message', backref='conversation', lazy=True)
+
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    sender = db.Column(db.String(50))
+    content = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    conversation = db.relationship('Conversation', backref=db.backref('feedback', lazy=True))
+
