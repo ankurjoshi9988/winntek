@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insurance Chatbot</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+		#feedback-container {
+			margin-bottom: 80px; /* Adjust the value as needed */
+			padding: 10px;
+			background-color: #f9f9f9;
+			border-radius: 10px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+			max-height: 30vh;
+			overflow-y: auto;
+		}
+
+		.feedback-message {
+			padding: 10px;
+			margin-bottom: 10px;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			background-color: #fff;
+		}
+
+        .timer {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+
+        .container {
+            max-width: 100%;
+            max-height: 100%;
+            margin: 0 auto;
+            padding: 5px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: left;
+            margin-bottom: 10px;
+            font-size: 12px; /* Adjust font size */
+        }
+        button:disabled {
+            background-color: #cccccc; /* Change the background color */
+            color: #666666;           /* Change the text color */
+            cursor: not-allowed;      /* Change the cursor to not-allowed */
+            pointer-events: none;     /* Disable pointer events */
+        }
+        .back-button {
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .chat-history {        
+            overflow-y: auto; /* Enable scrolling if content overflows */
+            height: 65vh; /* Set height to half the screen */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+            bottom: 100px; /* Adjust bottom based on the size of other elements like a navigation bar */
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+        }
+
+        .send-button,
+        .clear-chat-button {
+            flex: 0 0 48%; /* Adjust button width for better alignment */
+            margin-bottom: 10px; /* Add margin between buttons */
+            padding: 15px; /* Increased padding for better touchability */
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .clear-chat-button {
+            background-color: #dc3545;
+        }
+
+        .thumbs {
+            float: right;
+            clear: both;
+            /* Other styles for the thumbs icons */
+        }
+
+        .thumbs button {
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .thumbs button img {
+            width: 17px;
+            height: 17px;
+        }
+        .agent-message {
+            text-align: left;
+            font-size: 12px; /* Adjust font size */
+            padding: 3px; /* Adjust padding */
+        }
+
+        .message-wrapper {
+            overflow: auto; /* Ensure the wrapper contains floating elements */
+        }
+
+        .customer-message {
+            float: right;
+            clear: both;        
+            font-size: 12px; /* Adjust font size */
+            padding: 3px; /* Adjust padding */
+        }
+
+        .thumbs {
+            float: right;
+            clear: both;
+            /* Other styles for the thumbs icons */
+        }
+
+        .message-content {
+            display: inline-block;
+            background-color: #f2f2f2;        
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin between buttons */
+        }
+        .message-content.agent-message {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin at the bottom */
+            margin-right: 20%; /* Add margin to the right side */
+        }
+
+        .message-content.customer-message {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin at the bottom */
+            margin-left: 20%; /* Add margin to the left side */
+        }
+
+        .message-timestamp {
+            font-size: 12px;
+            color: #666;
+        }
+        nav {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #333;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 9px;
+            flex: 1 1 0; /* Ensures equal distribution and alignment */
+        }
+
+        nav a img {
+            display: block; /* Centers image in its flex container */
+            margin: 0 auto;
+            width: 24px;
+            height: 24px;
+        }
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="persona-details" id="persona-details">
+            <div class="header">
+                <h1 id="persona-header"><a href="/rehearse.html">Back </a> Main Chat with <span id="persona-name"></span></h1>
+                <div class="timer">Time left: <span id="time">05:00</span></div>
+                <span class="credits">Credits: <span id="credits"></span></span>
+            </div>
+            <div class="chat-history" id="chat-history"></div>
+        </div>
+        <div class="button-container">                
+            <button id="startButton" class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
+            <button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
+        </div>            
+        <div id="feedback-container"></div> <!-- Feedback container -->
+        <audio id="audio-player" controls style="display: none;"></audio>
+    </div>
+
+    <script>
+$.ajaxSetup({
+    headers: {
+        "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+    }
+});
+
+let timerStarted = false;
+let timerInterval;
+let totalTimeElapsed = 0;
+let credits;
+let stopTimer;
+let conversationActive = false;
+let recognition; // Define recognition variable at a global scope
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Clear conversation_id when loading the chat page
+    sessionStorage.removeItem('conversation_id');
+    fetch('/auth/get_credits')
+        .then(response => response.json())
+        .then(data => {
+            credits = data.credits;
+            document.getElementById('credits').textContent = credits;
+            if (credits <= 0) {
+                document.getElementById("startButton").disabled = true;
+                document.getElementById("startButton").style.backgroundColor = "#cccccc";
+                document.getElementById("startButton").style.cursor = "not-allowed";
+            }
+        });
+    
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Ensure conversation ID is initialized or cleared when a new persona is selected
+    $.ajax({
+        url: "/clear_session",
+        type: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        success: function(response) {
+            console.log("Session cleared: ", response);
+            $.ajax({
+                url: "/start_conversation/" + persona,
+                type: "POST",
+                data: JSON.stringify({ message: "" }), // Initial empty message to start the conversation
+                contentType: "application/json",
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    if (response.conversation_id) {
+                        sessionStorage.setItem('conversation_id', response.conversation_id);
+                    } else {
+                        console.error("No conversation_id in response");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error:", error);
+                }
+            });
+        },
+        error: function(xhr, status, error) {
+            console.error("Error clearing session:", error);
+        }
+    });
+});
+
+// Clear session storage on back button
+window.addEventListener('popstate', function () {
+    // Clear conversation_id when navigating back to persona list
+    sessionStorage.removeItem('conversation_id');
+});
+
+function startTimer(display) {
+    let duration = 60 * 5;
+    let start = Date.now();
+    let diff, minutes, seconds;
+    let creditsDeducted = false;
+
+    function timer() {
+        diff = duration - totalTimeElapsed - (((Date.now() - start) / 1000) | 0);
+        minutes = (diff / 60) | 0;
+        seconds = (diff % 60) | 0;
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+        display.textContent = minutes + ":" + seconds;
+
+        if (!creditsDeducted && diff <= 0) {
+            console.log("Attempting to deduct credit...");
+            fetch('/auth/deduct_credit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    "X-CSRFToken": csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Credit deduction response:", data);
+                credits = data.credits;
+                document.getElementById('credits').textContent = credits;
+                if (credits <= 0) {
+                    disableStartButton();
+                }
+            })
+            .catch(error => console.error('Error deducting credit:', error));
+            creditsDeducted = true;
+        }
+
+        if (diff <= 0) {
+            clearInterval(timerInterval);
+            display.textContent = "00:00";
+            disableStartButton();
+
+            // Get the conversation_id from sessionStorage
+            var conversation_id = sessionStorage.getItem('conversation_id');
+            if (conversation_id) {
+                closeConversation(conversation_id); // Close the conversation when time is up
+            }
+            alert('Time is up! Please re-select another persona to continue.');
+        }
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        totalTimeElapsed += ((Date.now() - start) / 1000) | 0;
+    }
+
+    timerInterval = setInterval(timer, 1000);
+
+    return stopTimer;
+}
+
+
+
+
+var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+const urlParams = new URLSearchParams(window.location.search);
+const persona = urlParams.get('persona');
+document.getElementById('persona-name').innerText = persona;
+
+function getCurrentTimestamp() {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+const closingStatements = ["नेक्स्ट मीटिंग", "I'll be in touch soon", "follow up", "अगली मीटिंग","next time", "will get back", "next meeting", "फॉलो-अप मीटिंग", "I'll compile all the details","can finalize everything in our next meeting", "It's been a pleasure discussing your needs", "I'll be back with a personalized plan soon", "Take care", "Have a great day", "bye", "I'll prepare the documents", "I'll get the customized policy ready", "goodbye","जल्द ही आपसे संपर्क करूँगा", "आपका दिन शुभ हो", "मैं दस्तावेज़ तैयार करूंगा","हम इसे अगली बैठक में पूरा करेंगे", "अलविदा", "विदा", "बाय","फिर मिलेंगे","अब चलता हूँ"];
+
+function detectClosingStatement(transcript) {
+    const lowerTranscript = transcript.toLowerCase();
+    return closingStatements.some(statement => lowerTranscript.includes(statement));
+}
+
+function startVoiceConversation() {
+    if (credits > 0) {
+        let display = document.querySelector('#time');
+        if (!timerStarted) {
+            stopTimer = startTimer(display);
+            timerStarted = true;
+        } else {
+            stopTimer(); // Stop the timer before starting recognition
+            stopTimer = startTimer(display); // Restart the timer
+        }
+
+        recognition = new webkitSpeechRecognition();
+        recognition.lang = 'hi-IN';
+        recognition.interimResults = false; // Only final results are needed
+        recognition.continuous = false; // Stop recognition on silence
+
+        recognition.onresult = function(event) {
+            var transcript = event.results[0][0].transcript;
+
+            document.getElementById('chat-history').innerHTML += `
+                <div class="message-wrapper">
+                    <div class="message-content agent-message">
+                        <p>${transcript}</p>
+                        <span class="message-timestamp">${getCurrentTimestamp()}</span>
+                    </div>
+                </div>
+            `;
+
+            var chatHistory = document.getElementById('chat-history');
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            var conversation_id = sessionStorage.getItem('conversation_id');
+            
+            if (!conversation_id) {
+                $.ajax({
+                    url: "/start_conversation/" + persona,
+                    type: "POST",
+                    data: JSON.stringify({ message: transcript }),
+                    contentType: "application/json",
+                    headers: {
+                        "X-CSRFToken": csrfToken
+                    },
+                    success: function(response) {
+                        if (response.conversation_id) {
+                            sessionStorage.setItem('conversation_id', response.conversation_id);
+                            handleUserMessage(transcript, response.conversation_id);
+                        } else {
+                            console.error("No conversation_id in response");
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error:", error);
+                    }
+                });
+            } else {
+                handleUserMessage(transcript, conversation_id);
+            }
+        };
+
+        recognition.onerror = function(event) {
+            console.error("Speech recognition error detected: " + event.error);
+        };
+
+        recognition.onspeechend = function() {
+            setTimeout(function() {
+                recognition.stop();
+            }, 2000); // Allow a 2-second pause before stopping recognition
+        };
+
+        recognition.onend = function() {
+            console.log("Speech recognition service disconnected");
+        };
+
+        recognition.start();
+    }
+}
+
+
+
+
+
+function handleUserMessage(transcript, conversation_id) {
+    addMessage('user', transcript, conversation_id);
+
+    if (detectClosingStatement(transcript)) {
+        disableStartButton();
+        closeConversation(conversation_id);
+        stopTimer();
+        return;
+    }
+
+    $.ajax({
+        url: "/start_conversation/" + persona,
+        type: "POST",
+        data: JSON.stringify({ message: transcript }),
+        contentType: "application/json",
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        success: function(response) {
+            if (response.conversation_id) {
+                sessionStorage.setItem('conversation_id', response.conversation_id);
+            }
+            console.log("System Response:", response.text);
+            if (response.audio) {
+                playAudio(response.audio);
+            }
+            if (response.text) {
+                document.getElementById('chat-history').innerHTML += `
+                    <div class="message-wrapper">
+                        <div class="message-content customer-message">
+                            <p>${response.text}</p>
+                            <span class="message-timestamp">${getCurrentTimestamp()}</span>
+                        </div>
+                        <div class="thumbs">
+                            <button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
+                            <button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
+                        </div>
+                    </div>
+                `;
+                addMessage('system', response.text, conversation_id);
+
+                var chatHistory = document.getElementById('chat-history');
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("Error:", error);
+        }
+    });
+}
+
+
+
+document.getElementById('chat-history').addEventListener('click', function(event) {
+    if (event.target && event.target.matches('.show-english')) {
+        var englishMessage = event.target.dataset.englishMessage;
+        showTranslation(event.target, englishMessage);
+    } else if (event.target && event.target.matches('.show-hindi')) {
+        var hindiMessage = event.target.dataset.hindiMessage;
+        showTranslation(event.target, hindiMessage);
+    }
+});
+
+function showTranslation(button, message) {
+    button.style.display = 'none';
+    var pTag = document.createElement('p');
+    pTag.textContent = message;
+    button.parentNode.insertBefore(pTag, button.nextSibling);
+}
+
+function thumbsUp(agentMessage, customerMessage) {
+    sendFeedback(agentMessage, customerMessage, 'positive');
+}
+
+function thumbsDown(agentMessage, customerMessage) {
+    sendFeedback(agentMessage, customerMessage, 'negative');
+}
+
+function sendFeedback(agentMessage, customerMessage, feedback) {
+    var feedbackData = {
+        agent_message: agentMessage,
+        customer_message: customerMessage,
+        feedback: feedback
+    };
+
+    $.ajax({
+        url: "/save_feedback",
+        type: "POST",
+        data: JSON.stringify(feedbackData),
+        contentType: "application/json",
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        success: function(response) {
+            console.log("Feedback saved successfully:", response);
+        },
+        error: function(xhr, status, error) {
+            console.error("Error saving feedback:", error);
+        }
+    });
+}
+
+function removeAudioFile(audioUrl) {
+    var filename = audioUrl.split('/').pop();
+    $.ajax({
+        url: "/remove_audio_file/" + filename,
+        type: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        success: function(response) {
+            console.log(response);
+        },
+        error: function(xhr, status, error) {
+            console.error("Error removing audio file:", error);
+        }
+    });
+}
+
+function playAudio(audioUrl) {
+    var audioPlayer = document.getElementById("audio-player");
+    audioPlayer.src = audioUrl;
+    audioPlayer.play();
+
+    // Stop speech recognition when system response audio is playing
+    if (recognition) {
+        recognition.stop();
+    }
+
+    audioPlayer.addEventListener("ended", function() {
+        removeAudioFile(audioUrl);
+        stopTimer(); // Stop the timer after system response
+        timerStarted = false; // Reset the timerStarted flag
+
+        // Enable the start button to restart the conversation
+        document.getElementById("startButton").disabled = false;
+    });
+}
+
+
+
+
+
+function goBack() {
+    window.location.href = "/static/rehears.html";
+}
+
+function clearChat() {
+    document.getElementById('chat-history').innerHTML = '';
+    document.getElementById('message-input').value = '';
+}
+
+function disableStartButton() {
+    const startButton = document.getElementById("startButton");
+    startButton.disabled = true;
+    startButton.style.backgroundColor = "#cccccc";
+    startButton.style.cursor = "not-allowed";
+}
+
+function addMessage(sender, content, conversation_id) {
+    console.log("Retrieved conversation_id 123:", conversation_id);
+    if (!conversation_id) {
+        console.error('No conversation ID found');
+        return;
+    }
+
+    $.ajax({
+        url: '/add_message',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            conversation_id: conversation_id,
+            sender: sender,
+            content: content
+        }),
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        success: function(response) {
+            console.log('Message added:', response);
+        },
+        error: function(xhr, status, error) {
+            console.error('Error adding message:', error);
+        }
+    });
+}
+
+
+function closeConversation(conversation_id) {
+    $.ajax({
+        url: '/close_conversation',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ conversation_id: conversation_id }),
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        success: function(response) {
+            console.log('Conversation closed:', response);
+            if (response.feedback) {
+                showFeedback(response.feedback);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error closing conversation:', error);
+        }
+    });
+}
+
+
+function showFeedback(feedback) {
+    const feedbackContainer = document.getElementById('feedback-container');
+    const feedbackSections = feedback.split('\n\n');
+
+    feedbackContainer.innerHTML = ''; // Clear previous feedback
+
+    feedbackSections.forEach(section => {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.style.border = '1px solid #ccc';
+        sectionDiv.style.padding = '10px';
+        sectionDiv.style.marginBottom = '10px';
+        sectionDiv.style.fontSize = '12px';
+        sectionDiv.style.backgroundColor = '#fff';
+        sectionDiv.style.borderRadius = '5px';
+
+        const sectionText = document.createElement('p');
+        sectionText.innerText = section;
+
+        sectionDiv.appendChild(sectionText);
+        feedbackContainer.appendChild(sectionDiv);
+    });
+}
+
+
+    </script>
+    <nav>
+        <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
+        <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
+        <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
+    </nav>
+	<div id="loading-indicator" style="display: none;">Evaluating conversation, please wait...</div>
+</body>
+</html>

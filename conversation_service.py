@@ -8,6 +8,7 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import asyncio
+from googletrans import Translator
 from flask import current_app as app
 load_dotenv()
 
@@ -23,7 +24,9 @@ def start_conversation(user_id, persona):
 
 
 
+
 def add_message(conversation_id, sender, content):
+
     message = Message(conversation_id=conversation_id, sender=sender, content=content)
     db.session.add(message)
     db.session.commit()
@@ -41,8 +44,9 @@ async def generate_feedback(conversation):
         print(f"Processing message: sender={sender}, content={message.content}")  # Debugging line
 
     overall_prompt = (
-        "Based on the following conversation between an insurance agent and a customer, provide feedback in hindi on the agent's performance. "
-        "The feedback should be categorized either 'Positives' or 'Needs Improvement' and should include specific comments on how the agent handled the conversation.  These categories should be in english.\n\n"
+        "Based on the following conversation between an insurance agent and a customer, provide feedback in a mix of Hindi and English on the agent's performance. "
+        "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation. "
+        "Consider the overall chat conversation in context. Do not generate or write '***' in feedback text. These categories should be in English.\n\n"
         f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
     )
 
@@ -53,25 +57,29 @@ async def generate_feedback(conversation):
     for message in conversation.messages:
         if message.sender == 'user':
             individual_prompt = (
-                "Provide feedback in hindi on the following response from the agent. "
-                "Indicate whether it was 'Positive' or 'Needs Improvement' and provide specific comments on how it could be improved if needed. These indicators should be in english.\n\n"
+                "Provide feedback in a mix of Hindi and English on the following response from the agent. specially those english words which are better understood in english. "
+                "Indicate whether it was 'Positive' or 'Needs Improvement' only if necessary and provide specific comments on how it could be improved if needed. "
+                "Consider the overall chat conversation in context. Do not generate '***' in feedback text. These indicators should be in English.\n\n"
                 f"Agent's response: {message.content}\n\nFeedback:"
             )
 
             individual_response = await llm_invoke(individual_prompt)
             feedback_text = individual_response.content if individual_response else "Could not generate individual feedback at this time."
-            individual_feedback_list.append(f"Agent's response: {message.content}\nFeedback: {feedback_text} in hindi")
+            individual_feedback_list.append(f"Agent's response: {message.content}\nFeedback: {feedback_text}")
 
-    combined_feedback = f"{overall_feedback}\n\nIndividual Feedback:\n" + "\n\n".join(individual_feedback_list)
+    combined_feedback = f"Overall Feedback:\n{overall_feedback}\n\nIndividual Feedback:\n" + "\n\n".join(individual_feedback_list)
 
     return combined_feedback
+
+
+
 
 async def llm_invoke(prompt):
     response = await asyncio.to_thread(llm.invoke, prompt)
     return response
 
 
-def close_conversation(conversation_id):
+async def close_conversation(conversation_id):
     conversation = Conversation.query.get(conversation_id)
     if not conversation:
         return "No conversation found with the given ID."
@@ -89,6 +97,8 @@ def close_conversation(conversation_id):
     except Exception as e:
         db.session.rollback()
         return f"An error occurred while closing the conversation: {str(e)}"
+
+
 
 
 

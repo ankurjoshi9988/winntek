@@ -2,6 +2,7 @@ import os
 import uuid
 import asyncio
 from flask import Flask, request, render_template, jsonify, send_from_directory, redirect, url_for, session
+from flask_session import Session
 from flask_login import login_required, current_user
 from datetime import timedelta
 from conversation_service import start_conversation, add_message, close_conversation
@@ -50,6 +51,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 
+# Configure server-side session
+app.config['SESSION_TYPE'] = 'filesystem'  # Use the filesystem to store sessions
+app.config['SESSION_FILE_DIR'] = './flask_session/'  # Directory to store session files
+
 # Additional configuration common to all environments
 app.config.update({
     'MAIL_SERVER': os.getenv('MAIL_SERVER', 'sandbox.smtp.mailtrap.io'),
@@ -83,9 +88,11 @@ login_manager.login_view = 'auth.login'
 csrf.init_app(app)
 mail.init_app(app)
 oauth.init_app(app)
-
+Session(app)  # Initialize the session
 # Initialize auth module
 init_auth(oauth)
+
+
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
@@ -247,14 +254,15 @@ def refer():
 @app.route('/rehearse.html')
 @login_required
 def persona_selection():
+    session.pop('conversation_id', None)
     return render_template('rehearse.html')
 
 
-@app.route('/Chat.html')
+@app.route('/Chat_hindi.html')
 @login_required
 def chat2():
     persona = request.args.get('persona')
-    return render_template('Chat.html', persona=persona)
+    return render_template('Chat_hindi.html', persona=persona)
 
 #demo
 @app.route('/SampleChat.html')
@@ -265,68 +273,21 @@ def chat1():
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
-@app.route('/translation', methods=['POST'])
-@login_required
-async def translation():
-    try:
-        # Ensure the request has a JSON body
-        if not request.is_json:
-            logging.error("Request is not JSON")
-            return jsonify({"error": "Bad request", "details": "Request must be JSON"}), 400
-
-        # Attempt to extract the message, with validation
-        data = request.get_json()
-        agent_message = data.get('message')
-        if not agent_message:
-            logging.error("No 'message' key in JSON request")
-            return jsonify({"error": "Bad request", "details": "Missing 'message' key in request"}), 400
-
-        # Define the prompts using the templates
-        systemPrompt = PromptTemplate.from_template(
-            "You are a helpful assistant, don't reveal yourself, just translate {input_language} to {output_language}."
-        )
-        humanPrompt = PromptTemplate.from_template("{text}")
-        systemMessagePrompt = SystemMessagePromptTemplate(prompt=systemPrompt)
-        humanMessagePrompt = HumanMessagePromptTemplate(prompt=humanPrompt)
-        chatPrompt = ChatPromptTemplate.from_messages([systemMessagePrompt, humanMessagePrompt])
-
-        # Format the message for translation
-        formatChatPrompt2 = chatPrompt.format_messages(
-            input_language="Hindi",
-            output_language="English",
-            text=agent_message
-        )
-
-        # Invoke the external LLM API
-        response3 = await asyncio.to_thread(llm.invoke, formatChatPrompt2)
-        hindi_message = response3.content
-        print(response3.content)  # Consider removing or altering this in production for privacy/security reasons
-
-        #hindi_message = "This is a sample text"
-        return jsonify({"hindi_message": hindi_message})
-
-    except KeyError as e:
-        # Specific exception for missing keys in JSON
-        logging.error(f"Key error in processing translation: {e}", exc_info=True)
-        return jsonify({"error": "Internal server error", "details": str(e)}), 500
-    except Exception as e:
-        # General exception for any other unhandled errors
-        logging.error("Failed to process translation", exc_info=True)
-        return jsonify({"error": "Internal server error", "details": str(e)}), 500
-
 
 
 @app.route('/start_conversation/<persona>', methods=['POST'])
 @login_required
 async def start_conversation1(persona):
     # Initialize or retrieve the conversation
-    # Check if there's an ongoing conversation
     conversation_id = session.get('conversation_id')
+    print(f"Initial conversation_id mahesh: {conversation_id}")
+
     if not conversation_id:
-        # Generate a new conversation_id if not found in session
         conversation_id = start_conversation(current_user.id, persona)
         session['conversation_id'] = conversation_id
-    print(f"Generated conversation_id: {conversation_id}")  # Add this line
+        session.modified = True  # Mark the session as modified to ensure it's saved
+    print(f"New conversation_id: {conversation_id}")
+
     agent_message = request.json.get('message')
     audio_file_name = str(uuid.uuid4()) + ".mp3"
 
@@ -356,51 +317,11 @@ async def start_conversation1(persona):
     customer_message = response.content
     print("Mahesh: ", customer_message)
 
-    for chat in positive_chat:
-        similarity_ratio = fuzz.ratio(agent_message.lower(), chat["agent_message"].lower())
-        if similarity_ratio >= 75:
-            response = chat["customer_message"]
-            customer_message = response
-            print("Mahesh01")
-            break
-    else:
-        for chat in negative_chat:
-            if agent_message == chat["agent_message"]:
-                if chat["customer_message"] is not None:
-                    response = None
-                else:
-                    response = await asyncio.to_thread(llm.invoke, message2)
-                    customer_message = response.content
-                    print("Mahesh02")
-                break
-        else:
-            response = await asyncio.to_thread(llm.invoke, message2)
-            customer_message = response.content
-            print("Mahesh03")
-
-    systemPrompt = PromptTemplate.from_template("You are helpful assistant, don't reveal yourself, just translates {input_language} to {output_language}.")
-    humanPrompt = PromptTemplate.from_template("{text}")
-    systemMessagePrompt = SystemMessagePromptTemplate(prompt=systemPrompt)
-    humanMessagePrompt = HumanMessagePromptTemplate(prompt=humanPrompt)
-    chatPrompt = ChatPromptTemplate.from_messages([
-        systemMessagePrompt,
-        humanMessagePrompt
-    ])
-    formatChatPrompt = chatPrompt.format_messages(
-        input_language="Hindi",
-        output_language="English",
-        text=customer_message
-    )
-    response2 = await asyncio.to_thread(llm.invoke, formatChatPrompt)
-    english_message = response2.content
-    print(response2.content)
-
     tts = gTTS(text=customer_message, lang='hi')
     await asyncio.to_thread(tts.save, f"static/{audio_file_name}")
 
     return jsonify({
         "text": customer_message,
-        "english_message": english_message,
         "audio": f"/static/{audio_file_name}",
         "conversation_id": conversation_id
     })
@@ -409,15 +330,21 @@ async def start_conversation1(persona):
 @app.route('/add_message', methods=['POST'])
 @login_required
 def add_message_route():
-    data = request.json
-    conversation_id = data.get('conversation_id')
-    sender = data.get('sender')
-    content = data.get('content')
-    if not conversation_id or not sender or not content:
-        return jsonify({'error': 'Invalid request'}), 400
+    try:
+        data = request.json
+        conversation_id = data.get('conversation_id')
+        sender = data.get('sender')
+        content = data.get('content')
 
-    add_message(conversation_id, sender, content)
-    return jsonify({'status': 'Message added'}), 200
+        if not conversation_id or not sender or not content:
+            logging.error(f"Invalid request: conversation_id={conversation_id}, sender={sender}, content={content}")
+            return jsonify({'error': 'Invalid request'}), 400
+
+        add_message(conversation_id, sender, content)
+        return jsonify({'status': 'Message added'}), 200
+    except Exception as e:
+        logging.error(f"Error adding message: {e}")
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 
@@ -429,12 +356,19 @@ def close_conversation_route():
     if not conversation_id:
         return jsonify({'error': 'conversation_id is required'}), 400
 
-    feedback = close_conversation(conversation_id)
+    feedback = asyncio.run(close_conversation(conversation_id))
     if feedback is None:
         return jsonify({'error': 'Failed to retrieve feedback'}), 500
 
     return jsonify({'status': 'conversation closed', 'feedback': feedback}), 200
 
+
+@app.route('/clear_session', methods=['POST'])
+@login_required
+def clear_session():
+    session.pop('conversation_id', None)
+    session.modified = True
+    return jsonify({'status': 'Session cleared'}), 200
 
 
 
