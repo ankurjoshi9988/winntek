@@ -8,8 +8,7 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import asyncio
-from googletrans import Translator
-from flask import current_app as app
+
 load_dotenv()
 
 api_key=os.environ['GOOGLE_API_KEY']
