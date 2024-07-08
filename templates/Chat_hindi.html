@@ -222,10 +222,14 @@ $.ajaxSetup({
 let timerStarted = false;
 let timerInterval;
 let totalTimeElapsed = 0;
+let remainingTime = 300; // 5 minutes in seconds
 let credits;
 let stopTimer;
 let conversationActive = false;
 let recognition; // Define recognition variable at a global scope
+
+
+
 
 document.addEventListener('DOMContentLoaded', function () {
     // Clear conversation_id when loading the chat page
@@ -235,16 +239,15 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             credits = data.credits;
             document.getElementById('credits').textContent = credits;
-            if (credits <= 0) {
+            if (credits > 0) {
+                document.getElementById("startButton").disabled = false;
+            } else {
                 document.getElementById("startButton").disabled = true;
                 document.getElementById("startButton").style.backgroundColor = "#cccccc";
                 document.getElementById("startButton").style.cursor = "not-allowed";
             }
         });
-    
-});
 
-document.addEventListener('DOMContentLoaded', function () {
     // Ensure conversation ID is initialized or cleared when a new persona is selected
     $.ajax({
         url: "/clear_session",
@@ -280,6 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+
 // Clear session storage on back button
 window.addEventListener('popstate', function () {
     // Clear conversation_id when navigating back to persona list
@@ -287,13 +291,13 @@ window.addEventListener('popstate', function () {
 });
 
 function startTimer(display) {
-    let duration = 60 * 5;
+    let duration = remainingTime; // Use the remaining time
     let start = Date.now();
     let diff, minutes, seconds;
     let creditsDeducted = false;
 
     function timer() {
-        diff = duration - totalTimeElapsed - (((Date.now() - start) / 1000) | 0);
+        diff = duration - (((Date.now() - start) / 1000) | 0);
         minutes = (diff / 60) | 0;
         seconds = (diff % 60) | 0;
         minutes = minutes < 10 ? "0" + minutes : minutes;
@@ -322,7 +326,7 @@ function startTimer(display) {
             creditsDeducted = true;
         }
 
-        if (diff <= 0) {
+        if (diff <= 0 || display.textContent === "00:00") {
             clearInterval(timerInterval);
             display.textContent = "00:00";
             disableStartButton();
@@ -338,7 +342,7 @@ function startTimer(display) {
 
     function stopTimer() {
         clearInterval(timerInterval);
-        totalTimeElapsed += ((Date.now() - start) / 1000) | 0;
+        remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
     }
 
     timerInterval = setInterval(timer, 1000);
@@ -375,8 +379,8 @@ function startVoiceConversation() {
             stopTimer = startTimer(display);
             timerStarted = true;
         } else {
-            stopTimer(); // Stop the timer before starting recognition
-            stopTimer = startTimer(display); // Restart the timer
+            clearInterval(timerInterval); // Clear the previous timer interval
+            stopTimer = startTimer(display); // Restart the timer with the remaining time
         }
 
         recognition = new webkitSpeechRecognition();
@@ -448,7 +452,6 @@ function startVoiceConversation() {
 
 
 
-
 function handleUserMessage(transcript, conversation_id) {
     addMessage('user', transcript, conversation_id);
 
@@ -499,6 +502,7 @@ function handleUserMessage(transcript, conversation_id) {
         }
     });
 }
+
 
 
 
@@ -580,13 +584,18 @@ function playAudio(audioUrl) {
 
     audioPlayer.addEventListener("ended", function() {
         removeAudioFile(audioUrl);
-        stopTimer(); // Stop the timer after system response
+        if (typeof stopTimer === 'function') {
+            stopTimer(); // Stop the timer after system response
+        }
         timerStarted = false; // Reset the timerStarted flag
 
         // Enable the start button to restart the conversation
-        document.getElementById("startButton").disabled = false;
+        enableStartButton();
     });
 }
+
+
+
 
 
 
@@ -606,6 +615,13 @@ function disableStartButton() {
     startButton.disabled = true;
     startButton.style.backgroundColor = "#cccccc";
     startButton.style.cursor = "not-allowed";
+}
+
+function enableStartButton() {
+    const startButton = document.getElementById("startButton");
+    startButton.disabled = false;
+    startButton.style.backgroundColor = "";
+    startButton.style.cursor = "pointer";
 }
 
 function addMessage(sender, content, conversation_id) {
@@ -651,9 +667,11 @@ function closeConversation(conversation_id) {
             if (response.feedback) {
                 showFeedback(response.feedback);
             }
+            alert('Please click 'OK' for feedback OR to select another persona for conversation.'); // Ensure the alert appears here
         },
         error: function(xhr, status, error) {
             console.error('Error closing conversation:', error);
+            alert('Time is up! Please re-select another persona to continue.');
         }
     });
 }

@@ -43,9 +43,9 @@ async def generate_feedback(conversation):
         print(f"Processing message: sender={sender}, content={message.content}")  # Debugging line
 
     overall_prompt = (
-        "Based on the following conversation between an insurance agent and a customer, provide feedback in a mix of Hindi and English on the agent's performance. "
-        "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation. "
-        "Consider the overall chat conversation in context. Do not generate or write '***' in feedback text. These categories should be in English.\n\n"
+        "Based on the following conversation between an insurance agent and a customer, provide feedback in Hindi on the agent's performance. "
+        "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation. These categories should be in English."
+        "Consider the overall chat conversation in context. Do not generate or write '***' in feedback text.\n\n"
         f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
     )
 
@@ -56,9 +56,9 @@ async def generate_feedback(conversation):
     for message in conversation.messages:
         if message.sender == 'user':
             individual_prompt = (
-                "Provide feedback in a mix of Hindi and English on the following response from the agent. specially those english words which are better understood in english. "
-                "Indicate whether it was 'Positive' or 'Needs Improvement' only if necessary and provide specific comments on how it could be improved if needed. "
-                "Consider the overall chat conversation in context. Do not generate '***' in feedback text. These indicators should be in English.\n\n"
+                "Provide feedback in Hindi on the following response from the agent. specially those english words which are better understood in english. "
+                "Indicate whether it was 'Positive' or 'Needs Improvement' only if necessary and provide specific comments on how it could be improved if needed. These indicators should be in English."
+                "Consider the overall chat conversation in context. Do not generate '***' in feedback text.\n\n"
                 f"Agent's response: {message.content}\n\nFeedback:"
             )
 
