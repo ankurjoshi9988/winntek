@@ -576,23 +576,22 @@ function sendFeedback(agentMessage, customerMessage, feedback) {
     });
 }
 
-function removeAudioFile(audioUrl) {
-    var filename = audioUrl.split('/').pop();
-    console.log("Attempting to remove audio file:", filename);  // Debugging log
+function removeAllAudioFiles() {
     $.ajax({
-        url: "/remove_audio_file/" + filename,
+        url: "/remove_all_audio_files",
         type: "POST",
         headers: {
             "X-CSRFToken": csrfToken
         },
         success: function(response) {
-            console.log("Response from server:", response);  // Debugging log
+            console.log(response);
         },
         error: function(xhr, status, error) {
-            console.error("Error removing audio file:", error);
+            console.error("Error removing audio files:", error);
         }
     });
 }
+
 
 
 
@@ -607,7 +606,7 @@ function playAudio(audioUrl) {
     }
 
     audioPlayer.addEventListener("ended", function() {
-        removeAudioFile(audioUrl);
+         removeAllAudioFiles(); // Remove all audio files after playing
         if (typeof stopTimer === 'function') {
             stopTimer(); // Stop the timer after system response
         }

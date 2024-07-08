@@ -11,7 +11,7 @@ from gtts import gTTS
 import google.generativeai as genai
 from dotenv import load_dotenv
 import json
-
+import glob
 import csv
 from knowledge import knowledge_bp
 import logging
@@ -95,6 +95,7 @@ init_auth(oauth)
 
 
 # Register Blueprints
+app.register_blueprint(knowledge_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
@@ -377,21 +378,17 @@ def clear_session():
 
 
 
-@app.route('/remove_audio_file/<filename>', methods=['POST'])
-async def remove_audio_file(filename):
+@app.route('/remove_all_audio_files', methods=['POST'])
+async def remove_all_audio_files():
     try:
-        file_path = os.path.join("static", filename)
-        print(f"Attempting to remove file: {file_path}")  # Debugging log
-        if os.path.exists(file_path):
+        audio_files = glob.glob(os.path.join("static", "*.mp3"))  # Adjust the extension if needed
+        for file_path in audio_files:
             await asyncio.to_thread(os.remove, file_path)
-            print(f"File {filename} removed successfully at path {file_path}.")  # Debugging log
-            return jsonify({"message": "Audio file removed successfully"})
-        else:
-            print(f"File {filename} not found at path {file_path}.")  # Debugging log
-            return jsonify({"error": "File not found"}), 404
+        return jsonify({"message": "All audio files removed successfully"})
     except Exception as e:
-        print("Error deleting audio file:", e)
-        return jsonify({"error": "Failed to remove audio file"}), 500
+        print("Error deleting audio files:", e)
+        return jsonify({"error": "Failed to remove audio files"}), 500
+
 
 
 
