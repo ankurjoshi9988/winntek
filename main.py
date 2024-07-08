@@ -381,11 +381,19 @@ def clear_session():
 async def remove_audio_file(filename):
     try:
         file_path = os.path.join("static", filename)
-        await asyncio.to_thread(os.remove, file_path)
-        return jsonify({"message": "Audio file removed successfully"})
+        print(f"Attempting to remove file: {file_path}")  # Debugging log
+        if os.path.exists(file_path):
+            await asyncio.to_thread(os.remove, file_path)
+            print(f"File {filename} removed successfully at path {file_path}.")  # Debugging log
+            return jsonify({"message": "Audio file removed successfully"})
+        else:
+            print(f"File {filename} not found at path {file_path}.")  # Debugging log
+            return jsonify({"error": "File not found"}), 404
     except Exception as e:
         print("Error deleting audio file:", e)
         return jsonify({"error": "Failed to remove audio file"}), 500
+
+
 
 
 if __name__ == "__main__":

@@ -578,6 +578,7 @@ function sendFeedback(agentMessage, customerMessage, feedback) {
 
 function removeAudioFile(audioUrl) {
     var filename = audioUrl.split('/').pop();
+    console.log("Attempting to remove audio file:", filename);  // Debugging log
     $.ajax({
         url: "/remove_audio_file/" + filename,
         type: "POST",
@@ -585,13 +586,15 @@ function removeAudioFile(audioUrl) {
             "X-CSRFToken": csrfToken
         },
         success: function(response) {
-            console.log(response);
+            console.log("Response from server:", response);  // Debugging log
         },
         error: function(xhr, status, error) {
             console.error("Error removing audio file:", error);
         }
     });
 }
+
+
 
 function playAudio(audioUrl) {
     var audioPlayer = document.getElementById("audio-player");
