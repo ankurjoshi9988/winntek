@@ -7,15 +7,28 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-		#feedback-container {
-			margin-bottom: 80px; /* Adjust the value as needed */
-			padding: 10px;
-			background-color: #f9f9f9;
-			border-radius: 10px;
-			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-			max-height: 30vh;
-			overflow-y: auto;
-		}
+		#loading-indicator {
+            display: none;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+
+        #loading-indicator img {
+            width: 100%;
+            height: 100%;
+        }
+
+        #feedback-container {
+            margin-bottom: 80px; /* Adjust the value as needed */
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 30vh;
+            overflow-y: auto;
+            text-align: center; /* Center-align the content */
+        }
 
 		.feedback-message {
 			padding: 10px;
@@ -207,8 +220,16 @@
         <div class="button-container">                
             <button id="startButton" class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
             <button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
-        </div>            
+        </div>
+		<div id="loading-indicator" style="display: none;">
+			<img src="/static/loadinganim.gif" alt="Generating feedback, please wait...">
+		</div>
+		
         <div id="feedback-container"></div> <!-- Feedback container -->
+			<div id="loading-indicator">
+                <img src="/static/loading.gif" alt="Generating feedback, please wait...">
+            </div>
+		</div> <!-- Feedback container -->
         <audio id="audio-player" controls style="display: none;"></audio>
     </div>
 
@@ -386,7 +407,7 @@ function startVoiceConversation() {
         recognition = new webkitSpeechRecognition();
         recognition.lang = 'hi-IN';
         recognition.interimResults = false; // Only final results are needed
-        recognition.continuous = false; // Stop recognition on silence
+        recognition.continuous = true; // Stop recognition on silence
 
         recognition.onresult = function(event) {
             var transcript = event.results[0][0].transcript;
@@ -438,7 +459,7 @@ function startVoiceConversation() {
         recognition.onspeechend = function() {
             setTimeout(function() {
                 recognition.stop();
-            }, 2000); // Allow a 2-second pause before stopping recognition
+            }, 3000); // Allow a 2-second pause before stopping recognition
         };
 
         recognition.onend = function() {
@@ -653,60 +674,72 @@ function addMessage(sender, content, conversation_id) {
 }
 
 
-function closeConversation(conversation_id) {
-    $.ajax({
-        url: '/close_conversation',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({ conversation_id: conversation_id }),
-        headers: {
-            "X-CSRFToken": csrfToken
-        },
-        success: function(response) {
-            console.log('Conversation closed:', response);
-            if (response.feedback) {
-                showFeedback(response.feedback);
-            }
-            alert('Please click 'OK' for feedback OR to select another persona for conversation.'); // Ensure the alert appears here
-        },
-        error: function(xhr, status, error) {
-            console.error('Error closing conversation:', error);
-            alert('Time is up! Please re-select another persona to continue.');
+		function closeConversation(conversation_id) {
+            // Show loading indicator
+            document.getElementById('loading-indicator').style.display = 'block';
+
+            // Scroll to feedback container
+            document.getElementById('feedback-container').scrollIntoView({ behavior: 'smooth' });
+
+            $.ajax({
+                url: '/close_conversation',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ conversation_id: conversation_id }),
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    console.log('Conversation closed:', response);
+                    if (response.feedback) {
+                        showFeedback(response.feedback);
+                    }
+
+                    // Hide loading indicator after feedback is shown
+                    document.getElementById('loading-indicator').style.display = 'none';
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error closing conversation:', error);
+
+                    // Hide loading indicator if there's an error
+                    document.getElementById('loading-indicator').style.display = 'none';
+                }
+            });
         }
-    });
-}
 
 
-function showFeedback(feedback) {
-    const feedbackContainer = document.getElementById('feedback-container');
-    const feedbackSections = feedback.split('\n\n');
 
-    feedbackContainer.innerHTML = ''; // Clear previous feedback
+        function showFeedback(feedback) {
+            const feedbackContainer = document.getElementById('feedback-container');
+            const feedbackSections = feedback.split('\n\n');
 
-    feedbackSections.forEach(section => {
-        const sectionDiv = document.createElement('div');
-        sectionDiv.style.border = '1px solid #ccc';
-        sectionDiv.style.padding = '10px';
-        sectionDiv.style.marginBottom = '10px';
-        sectionDiv.style.fontSize = '12px';
-        sectionDiv.style.backgroundColor = '#fff';
-        sectionDiv.style.borderRadius = '5px';
+            feedbackContainer.innerHTML = ''; // Clear previous feedback
 
-        const sectionText = document.createElement('p');
-        sectionText.innerText = section;
+            feedbackSections.forEach(section => {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.style.border = '1px solid #ccc';
+                sectionDiv.style.padding = '10px';
+                sectionDiv.style.marginBottom = '10px';
+                sectionDiv.style.fontSize = '12px';
+                sectionDiv.style.backgroundColor = '#fff';
+                sectionDiv.style.borderRadius = '5px';
 
-        sectionDiv.appendChild(sectionText);
-        feedbackContainer.appendChild(sectionDiv);
-    });
-}
+                const sectionText = document.createElement('p');
+                sectionText.innerText = section;
+
+                sectionDiv.appendChild(sectionText);
+                feedbackContainer.appendChild(sectionDiv);
+            });
+        }
 
 
     </script>
+	
     <nav>
         <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
         <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
         <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
     </nav>
-	<div id="loading-indicator" style="display: none;">Evaluating conversation, please wait...</div>
+	
 </body>
 </html>
