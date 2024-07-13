@@ -10,7 +10,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
-
+from flask_login import login_required, current_user
 knowledge_bp = Blueprint("recall", __name__, url_prefix="/recall")
 
 load_dotenv()
@@ -57,11 +57,13 @@ def get_conversational_chain():
     return chain
 
 @knowledge_bp.route("/", methods=["GET"])
+@login_required
 def render_knowledge_page():
     return render_template("recall.html")
 
 
 @knowledge_bp.route("/upload", methods=["POST"])
+@login_required
 def upload_document():
     pdf_docs = request.files.getlist("pdf_docs")
     if pdf_docs:
@@ -78,12 +80,20 @@ def upload_document():
 
 @knowledge_bp.route("/ask", methods=["POST"])
 def ask_question():
-    user_question = request.form.get("question")
-    if user_question:
-        response = user_input(user_question)
-        return render_template("recall.html", response=response)
-    else:
-        return "No question provided."
+    try:
+        data = request.get_json()  # Use get_json to get JSON data
+        user_question = data.get("question", "")  # Default to empty string if no question provided
+        if user_question:
+            response = user_input(user_question)
+            return jsonify(response=response["output_text"])  # Ensure the response is correctly formatted
+        else:
+            return jsonify(response="No question provided"), 400
+    except Exception as e:
+        print(f"Error handling request: {e}")
+        return jsonify(response="Internal Server Error"), 500
+
+
+
 
 
 def user_input(user_question):
@@ -95,7 +105,8 @@ def user_input(user_question):
     response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
 
     print(response)
-    return response["output_text"]
+    return {"output_text": response["output_text"]}
+
 
 
 

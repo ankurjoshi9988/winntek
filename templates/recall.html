@@ -5,145 +5,297 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recall</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
+            height: 100%;
             overflow-x: hidden;
             box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .container {
+            flex: 1;
             width: 100%;
             max-width: 600px;
-            margin: 0 auto;
             padding: 20px;
-            overflow: hidden;
             box-sizing: border-box;
             background: #fff;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            overflow-y: auto; /* Make the container scrollable */
+            max-height: calc(100vh - 250px); /* Adjust height to avoid overlapping with the bottom container */
         }
-        input, button {
+        .bottom-container {
+            width: 100%;
+            max-width: 600px;
+            background: #fff;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: fixed;
+            bottom: 50px;
+        }
+        .form-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        input[type="file"], input[type="text"], input[type="submit"], button {
             width: 100%;
             padding: 10px;
             margin-top: 10px;
             border: 1px solid #ccc;
             box-sizing: border-box;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+            color: #333;
+            cursor: pointer;
         }
-        .lesson {
-            margin-bottom: 20px;
+        input[type="text"] {
+            background-color: #e6f7ff;
+        }
+        input[type="submit"].disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            color: #666;
+        }
+        input[type="submit"].enabled {
+            background-color: #007bff;
+            cursor: pointer;
+            color: white;
         }
         label {
             font-weight: bold;
+            margin-bottom: 10px;
             display: block;
-            margin-bottom: 10px;
-        }
-        input[type="file"],
-        input[type="text"],
-        input[type="submit"] {
+            text-align: left;
             width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
         }
-        input[type="submit"] {
+        .toggle-button {
+            margin-top: 10px;
+            width: 100%;
             background-color: #007bff;
             color: white;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
         }
-        input[type="submit"]:disabled {
-            background-color: #ccc;
+        nav {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #333;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
         }
-		nav {
-			font-family: 'Roboto', sans-serif;
-			display: flex;
-			justify-content: space-around;
-			align-items: center;
-			background: #333;
-			padding: 10px 0;
-			position: fixed;
-			bottom: 0;
-			width: 100%;
-		}
-
-		nav a {
-			color: white;
-			text-decoration: none;
-			text-align: center;			 
-			font-size: 9px !important;;
-			flex: 1 1 0; /* Ensures equal distribution and alignment */
-		}
-
-		nav a img {
-			display: block; /* Centers image in its flex container */
-			margin: 0 auto;
-			width: 24px;
-			height: 24px;
-		}
-		nav a:hover {
-			background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
-			transition: background-color 0.3s ease; /* Smooth transition */
-		}
+        nav a {
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 12px;
+        }
+        nav a img {
+            display: block;
+            margin: 0 auto;
+            width: 24px;
+            height: 24px;
+        }
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        .loading-indicator {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        #response-container {
+            max-height: 480x; /* Set a fixed height */
+            overflow-y: auto; /* Make it scrollable */
+            padding: 5px;
+            box-sizing: border-box;
+            background: #f9f9f9;
+            margin-bottom: 10px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
+    <div class="loading-indicator">Uploading...</div>
+
     <div class="container">
-        <!-- File upload form -->
-        <div class="lesson">
+        <div id="response-container" style="display: none;">
+            <div id="response">
+                <p>Document uploaded...</p>
+                <h2>Response:</h2>
+                <p>{{ response }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-container">
+        <div id="upload-section" class="form-container">
             <form id="upload_form" action="/recall/upload" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label for="pdf_docs">Upload PDF Files:</label>
                 <input type="file" id="pdf_docs" name="pdf_docs" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv">
                 <input id="upload_button" type="submit" value="Upload" disabled>
             </form>
         </div>
 
-        <!-- Ask question form -->
-        <div class="lesson">
+        <div id="ask-section" class="form-container" style="display:none;">
             <form id="ask_form" action="/recall/ask" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label for="question">Enter Your Question:</label>
                 <input type="text" id="question" name="question" placeholder="Ask your question here..." value="">
                 <input id="ask_button" type="submit" value="Ask" disabled>
             </form>
+            <button id="toggleButton" class="toggle-button" type="button" onclick="toggleSections()">Upload Document</button>
         </div>
-
-        <!-- Display message if no file selected -->
-        {% if message %}
-        <div id="message">
-            <p>{{ message }}</p>
-        </div>
-        {% endif %}
-
-        <!-- Response section -->
-        {% if response %}
-        <div id="response">
-			<p>Document uploaded...</p>
-            <h2>Response:</h2>
-            <p>{{ response }}</p>
-        </div>
-        {% endif %}
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        // File upload form validation and enabling/disabling the upload button
-        document.getElementById('pdf_docs').addEventListener('change', function() {
-            var files = this.files;
-            var uploadButton = document.getElementById('upload_button');
-            uploadButton.disabled = files.length === 0;
+        document.addEventListener('DOMContentLoaded', function() {
+            var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            var askForm = document.getElementById('ask_form');
+            var askButton = document.getElementById('ask_button');
+            var questionInput = document.getElementById('question');
+
+            document.getElementById('pdf_docs').addEventListener('change', function() {
+                var files = this.files;
+                var uploadButton = document.getElementById('upload_button');
+                uploadButton.disabled = files.length === 0;
+                toggleButtonState(uploadButton);
+            });
+
+            questionInput.addEventListener('input', function() {
+                var questionValue = this.value.trim();
+                askButton.disabled = questionValue === '';
+                toggleButtonState(askButton);
+                console.log("Question input changed to:", questionValue);
+            });
+
+            function toggleButtonState(button) {
+                if (button.disabled) {
+                    button.classList.add('disabled');
+                    button.classList.remove('enabled');
+                } else {
+                    button.classList.remove('disabled');
+                    button.classList.add('enabled');
+                    button.removeAttribute('disabled');
+                }
+            }
+
+            document.getElementById('upload_form').addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                document.title = "Uploading...";
+                document.querySelector('.loading-indicator').style.display = 'flex';
+
+                var formData = new FormData(this);
+
+                $.ajax({
+                    url: this.action,
+                    type: this.method,
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        document.title = "Recall";
+                        document.querySelector('.loading-indicator').style.display = 'none'; // Hide the loading indicator
+
+                        document.getElementById('upload-section').style.display = 'none';
+                        document.getElementById('ask-section').style.display = 'flex';
+                        document.getElementById('response-container').style.display = 'block';
+                        document.getElementById('response').innerHTML = `
+                            <p>Document uploaded...</p>
+                        `;
+                    },
+                    error: function(xhr, status, error) {
+                        document.querySelector('.loading-indicator').style.display = 'none'; // Hide the loading indicator in case of error
+                        console.error('Upload error:', error);
+                    }
+                });
+            });
+
+            askForm.addEventListener('submit', function(event) {
+                console.log('Form submit event triggered');
+                event.preventDefault();
+
+                var question = questionInput.value.trim();
+                console.log('Submitting question:', question);
+
+                if (question) {
+                    $.ajax({
+                        url: this.action,
+                        type: this.method,
+                        data: JSON.stringify({ question: question }),
+                        contentType: 'application/json',
+                        headers: {
+                            "X-CSRFToken": csrfToken
+                        },
+                        success: function(response) {
+                            console.log('AJAX success:', response);
+                            // Assuming the response is in the form {response: 'some text'}
+                            document.getElementById('response').innerHTML = `
+                                <h2>Response:</h2>
+                                <p style="font-size: 12px;">${response.response}</p>
+                            `;
+                            document.getElementById('response-container').style.display = 'block';
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Ask error:', error);
+                            alert('An error occurred while submitting the question. Please check the console for details.');
+                        }
+                    });
+                } else {
+                    console.log('No question provided');
+                    alert('Please enter a question.');
+                }
+            });
+
+            document.addEventListener('click', function(event) {
+                console.log('Click event on:', event.target);
+            });
+
+            console.log('DOM fully loaded');
+            console.log('Ask form:', askForm);
+            console.log('Ask button:', askButton);
+
+            document.getElementById('toggleButton').addEventListener('click', function() {
+                toggleSections();
+            });
         });
 
-        // Question input form enabling/disabling the ask button
-        document.getElementById('question').addEventListener('input', function() {
-            var questionInput = this.value.trim();
-            var askButton = document.getElementById('ask_button');
-            askButton.disabled = questionInput === '';
-        });
+        function toggleSections() {
+            document.getElementById('upload-section').style.display = 'flex';
+            document.getElementById('ask-section').style.display = 'none';
+            document.getElementById('response-container').style.display = 'none';
+        }
     </script>
-	<nav>
+    <nav>
         <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
-		<a href="/refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>		       
-        <a href="/rehearse.html"><img src="/static/rehearse_icon.png" alt="Rehearse Icon">Rehearse</a>
+        <a href="/recall"><img src="/static/recall_icon.png" alt="Recall Icon">Recall</a>
+        <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
     </nav>
 </body>
 </html>
