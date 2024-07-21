@@ -293,6 +293,7 @@
 
         function selectPersona(persona, language) {
             var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
+			var imageUrl = $("#personaListContainer").find(`img[alt='${persona}']`).attr('src'); // Get the image URL
             window.location.href = page + "?persona=" + encodeURIComponent(persona);
         }
     </script>

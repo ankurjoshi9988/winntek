@@ -7,40 +7,13 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-		#loading-indicator {
+        #loading-indicator {
             display: none;
             width: 200px;
             height: 200px;
             margin: 0 auto;
         }
-		.feedback-overall {
-			padding: 10px;
-			margin-bottom: 10px;
-			border: 1px solid #4CAF50;
-			border-radius: 5px;
-			background-color: #e8f5e9;
-			font-size: 14px;
-			color: #388e3c;
-		}
 
-		.feedback-individual {
-			padding: 10px;
-			margin-bottom: 10px;
-			border: 1px solid #2196F3;
-			border-radius: 5px;
-			background-color: #e3f2fd;
-			font-size: 14px;
-			color: #1976d2;
-		}
-
-		.feedback-title {
-			font-weight: bold;
-			margin-bottom: 5px;
-		}
-
-		.individual-feedback-item {
-			margin-bottom: 10px;
-		}
         #loading-indicator img {
             width: 100%;
             height: 100%;
@@ -57,18 +30,19 @@
             text-align: center; /* Center-align the content */
         }
 
-		.feedback-message {
-			padding: 10px;
-			margin-bottom: 10px;
-			border: 1px solid #ccc;
-			border-radius: 5px;
-			background-color: #fff;
-		}
+        .feedback-message {
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+        }
 
         .timer {
             font-size: 16px;
             font-weight: bold;
         }
+
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -91,12 +65,14 @@
             margin-bottom: 10px;
             font-size: 12px; /* Adjust font size */
         }
+
         button:disabled {
             background-color: #cccccc; /* Change the background color */
             color: #666666;           /* Change the text color */
             cursor: not-allowed;      /* Change the cursor to not-allowed */
             pointer-events: none;     /* Disable pointer events */
         }
+
         .back-button {
             cursor: pointer;
             margin-right: 10px;
@@ -151,6 +127,7 @@
             width: 17px;
             height: 17px;
         }
+
         .agent-message {
             text-align: left;
             font-size: 12px; /* Adjust font size */
@@ -180,6 +157,7 @@
             border-radius: 10px;
             margin-bottom: 5px; /* Add margin between buttons */
         }
+
         .message-content.agent-message {
             background-color: #f0f0f0;
             color: #333;
@@ -202,6 +180,7 @@
             font-size: 12px;
             color: #666;
         }
+
         nav {
             font-family: 'Roboto', sans-serif;
             display: flex;
@@ -228,87 +207,320 @@
             width: 24px;
             height: 24px;
         }
+
         nav a:hover {
             background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
             transition: background-color 0.3s ease; /* Smooth transition */
         }
+
+		.persona-media {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			margin-bottom: 10px;
+		}
+
+		.persona-media img {
+			width: 100px; /* Adjust width as needed */
+			height: auto;
+			border-radius: 50%;
+			margin-bottom: 10px; /* Space between image and audio wave */
+		}
+
+		.audio-wave {
+			display: flex;
+			justify-content: center;
+			width: 100%; /* Ensure it spans the full width */
+			height: 30px; /* Set a fixed height */
+		}
+
+		.audio-wave img {
+			width: 50px; /* Adjust width as needed */
+			height: 30px; /* Adjust height as needed */
+		}
+
+
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="persona-details" id="persona-details">
-            <div class="header">
+        <div class="persona-details" id="persona-details">            
+            <div>
                 <h1 id="persona-header"><a href="/rehearse.html">Back </a> Main Chat with <span id="persona-name"></span></h1>
                 <div class="timer">Time left: <span id="time">05:00</span></div>
                 <span class="credits">Credits: <span id="credits"></span></span>
             </div>
-            <div class="chat-history" id="chat-history"></div>
         </div>
+		<!-- New div for persona image and audio wave animation -->
+		<div class="persona-media" id="persona-media">
+			<img id="persona-image" src="/path/to/default-image.jpg" alt="Persona Image">
+			<div class="audio-wave" id="audio-wave">
+				<img src="/static/audio-wave-placeholder.gif" alt="Audio Wave Animation" id="audio-wave-placeholder">
+			</div>
+		</div>
+        <div class="chat-history" id="chat-history"></div>        
         <div class="button-container">                
             <button id="startButton" class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
             <button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
         </div>
-		<div id="loading-indicator" style="display: none;">
-			<img src="/static/loadinganim.gif" alt="Generating feedback, please wait...">
-		</div>
-		
+        <div id="loading-indicator" style="display: none;">
+            <img src="/static/loadinganim.gif" alt="Generating feedback, please wait...">
+        </div>
         <div id="feedback-container"></div> <!-- Feedback container -->
-			<div id="loading-indicator">
-                <img src="/static/loading.gif" alt="Generating feedback, please wait...">
-            </div>
-		</div> <!-- Feedback container -->
         <audio id="audio-player" controls style="display: none;"></audio>
     </div>
-
     <script>
-$.ajaxSetup({
-    headers: {
-        "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
-    }
-});
-
-let timerStarted = false;
-let timerInterval;
-let totalTimeElapsed = 0;
-let remainingTime = 300; // 5 minutes in seconds
-let credits;
-let stopTimer;
-let conversationActive = false;
-let recognition; // Define recognition variable at a global scope
-
-
-
-
-document.addEventListener('DOMContentLoaded', function () {
-    // Clear conversation_id when loading the chat page
-    sessionStorage.removeItem('conversation_id');
-    fetch('/auth/get_credits')
-        .then(response => response.json())
-        .then(data => {
-            credits = data.credits;
-            document.getElementById('credits').textContent = credits;
-            if (credits > 0) {
-                document.getElementById("startButton").disabled = false;
-            } else {
-                document.getElementById("startButton").disabled = true;
-                document.getElementById("startButton").style.backgroundColor = "#cccccc";
-                document.getElementById("startButton").style.cursor = "not-allowed";
+        $.ajaxSetup({
+            headers: {
+                "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
             }
         });
 
-    // Ensure conversation ID is initialized or cleared when a new persona is selected
-    $.ajax({
-        url: "/clear_session",
-        type: "POST",
-        headers: {
-            "X-CSRFToken": csrfToken
-        },
-        success: function(response) {
-            console.log("Session cleared: ", response);
+        let timerStarted = false;
+        let timerInterval;
+        let totalTimeElapsed = 0;
+        let remainingTime = 300; // 5 minutes in seconds
+        let credits;
+        let stopTimer;
+        let conversationActive = false;
+        let recognition; // Define recognition variable at a global scope
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Clear conversation_id when loading the chat page
+            sessionStorage.removeItem('conversation_id');
+            fetch('/auth/get_credits')
+                .then(response => response.json())
+                .then(data => {
+                    credits = data.credits;
+                    document.getElementById('credits').textContent = credits;
+                    if (credits > 0) {
+                        document.getElementById("startButton").disabled = false;
+                    } else {
+                        document.getElementById("startButton").disabled = true;
+                        document.getElementById("startButton").style.backgroundColor = "#cccccc";
+                        document.getElementById("startButton").style.cursor = "not-allowed";
+                    }
+                });
+
+            // Ensure conversation ID is initialized or cleared when a new persona is selected
+            $.ajax({
+                url: "/clear_session",
+                type: "POST",
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    console.log("Session cleared: ", response);
+                    $.ajax({
+                        url: "/start_conversation/" + persona,
+                        type: "POST",
+                        data: JSON.stringify({ message: "" }), // Initial empty message to start the conversation
+                        contentType: "application/json",
+                        headers: {
+                            "X-CSRFToken": csrfToken
+                        },
+                        success: function(response) {
+                            if (response.conversation_id) {
+                                sessionStorage.setItem('conversation_id', response.conversation_id);
+                            } else {
+                                console.error("No conversation_id in response");
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error:", error);
+                        }
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error clearing session:", error);
+                }
+            });
+			// Add the following code to load the persona image
+			const personaName = new URLSearchParams(window.location.search).get('persona');
+			const personaImage = personaName.toLowerCase().replace(/\s+/g, '_') + ".jpg";
+			const imageUrl = `/static/${personaImage}`;
+			$('#persona-image').attr('src', imageUrl).on('error', function() {
+				$(this).attr('src', '/static/default_image.jpg'); // Fallback image
+			});
+        });
+
+        // Clear session storage on back button
+        window.addEventListener('popstate', function () {
+            // Clear conversation_id when navigating back to persona list
+            sessionStorage.removeItem('conversation_id');
+        });
+
+        function startTimer(display) {
+            let duration = remainingTime; // Use the remaining time
+            let start = Date.now();
+            let diff, minutes, seconds;
+            let creditsDeducted = false;
+
+            function timer() {
+                diff = duration - (((Date.now() - start) / 1000) | 0);
+                minutes = (diff / 60) | 0;
+                seconds = (diff % 60) | 0;
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+                display.textContent = minutes + ":" + seconds;
+
+                if (!creditsDeducted && diff <= 0) {
+                    console.log("Attempting to deduct credit...");
+                    fetch('/auth/deduct_credit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            "X-CSRFToken": csrfToken
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Credit deduction response:", data);
+                        credits = data.credits;
+                        document.getElementById('credits').textContent = credits;
+                        if (credits <= 0) {
+                            disableStartButton();
+                        }
+                    })
+                    .catch(error => console.error('Error deducting credit:', error));
+                    creditsDeducted = true;
+                }
+
+                if (diff <= 0 || display.textContent === "00:00") {
+                    clearInterval(timerInterval);
+                    display.textContent = "00:00";
+                    disableStartButton();
+
+                    // Get the conversation_id from sessionStorage
+                    var conversation_id = sessionStorage.getItem('conversation_id');
+                    if (conversation_id) {
+                        closeConversation(conversation_id); // Close the conversation when time is up
+                    }
+                    alert('Time is up! Please re-select another persona to continue.');
+                }
+            }
+
+            function stopTimer() {
+                clearInterval(timerInterval);
+                remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
+            }
+
+            timerInterval = setInterval(timer, 1000);
+
+            return stopTimer;
+        }
+
+        var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const urlParams = new URLSearchParams(window.location.search);
+        const persona = urlParams.get('persona');
+        document.getElementById('persona-name').innerText = persona;
+
+        function getCurrentTimestamp() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        const closingStatements = ["नेक्स्ट मीटिंग", "I'll be in touch soon", "follow up", "अगली मीटिंग","next time", "will get back", "next meeting", "फॉलो-अप मीटिंग", "I'll compile all the details","can finalize everything in our next meeting", "It's been a pleasure discussing your needs", "I'll be back with a personalized plan soon", "Take care", "Have a great day", "bye", "I'll prepare the documents", "I'll get the customized policy ready", "goodbye","जल्द ही आपसे संपर्क करूँगा", "आपका दिन शुभ हो", "मैं दस्तावेज़ तैयार करूंगा","हम इसे अगली बैठक में पूरा करेंगे", "अलविदा", "विदा", "बाय","फिर मिलेंगे","अब चलता हूँ"];
+
+        function detectClosingStatement(transcript) {
+            const lowerTranscript = transcript.toLowerCase();
+            return closingStatements.some(statement => lowerTranscript.includes(statement));
+        }
+
+        function startVoiceConversation() {
+            if (credits > 0) {
+                let display = document.querySelector('#time');
+                if (!timerStarted) {
+                    stopTimer = startTimer(display);
+                    timerStarted = true;
+                } else {
+                    clearInterval(timerInterval); // Clear the previous timer interval
+                    stopTimer = startTimer(display); // Restart the timer with the remaining time
+                }
+
+                recognition = new webkitSpeechRecognition();
+                recognition.lang = 'hi-IN';
+                recognition.interimResults = false; // Only final results are needed
+                recognition.continuous = true; // Stop recognition on silence
+
+                recognition.onresult = function(event) {
+                    var transcript = event.results[0][0].transcript;
+
+                    document.getElementById('chat-history').innerHTML += `
+                        <div class="message-wrapper">
+                            <div class="message-content agent-message">
+                                <p>${transcript}</p>
+                                <span class="message-timestamp">${getCurrentTimestamp()}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    var chatHistory = document.getElementById('chat-history');
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+
+                    var conversation_id = sessionStorage.getItem('conversation_id');
+                    
+                    if (!conversation_id) {
+                        $.ajax({
+                            url: "/start_conversation/" + persona,
+                            type: "POST",
+                            data: JSON.stringify({ message: transcript }),
+                            contentType: "application/json",
+                            headers: {
+                                "X-CSRFToken": csrfToken
+                            },
+                            success: function(response) {
+                                if (response.conversation_id) {
+                                    sessionStorage.setItem('conversation_id', response.conversation_id);
+                                    handleUserMessage(transcript, response.conversation_id);
+                                } else {
+                                    console.error("No conversation_id in response");
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Error:", error);
+                            }
+                        });
+                    } else {
+                        handleUserMessage(transcript, conversation_id);
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error("Speech recognition error detected: " + event.error);
+                };
+
+                recognition.onspeechend = function() {
+                    setTimeout(function() {
+                        recognition.stop();
+                    }, 3000); // Allow a 2-second pause before stopping recognition
+                };
+
+                recognition.onend = function() {
+                    console.log("Speech recognition service disconnected");
+                };
+
+                recognition.start();
+            }
+        }
+
+        function handleUserMessage(transcript, conversation_id) {
+            addMessage('user', transcript, conversation_id);
+
+            if (detectClosingStatement(transcript)) {
+                disableStartButton();
+                closeConversation(conversation_id);
+                stopTimer();
+                return;
+            }
+
             $.ajax({
                 url: "/start_conversation/" + persona,
                 type: "POST",
-                data: JSON.stringify({ message: "" }), // Initial empty message to start the conversation
+                data: JSON.stringify({ message: transcript }),
                 contentType: "application/json",
                 headers: {
                     "X-CSRFToken": csrfToken
@@ -316,394 +528,179 @@ document.addEventListener('DOMContentLoaded', function () {
                 success: function(response) {
                     if (response.conversation_id) {
                         sessionStorage.setItem('conversation_id', response.conversation_id);
-                    } else {
-                        console.error("No conversation_id in response");
+                    }
+                    console.log("System Response:", response.text);
+                    if (response.audio) {
+                        playAudio(response.audio);
+                    }
+                    if (response.text) {
+                        document.getElementById('chat-history').innerHTML += `
+                            <div class="message-wrapper">
+                                <div class="message-content customer-message">
+                                    <p>${response.text}</p>
+                                    <span class="message-timestamp">${getCurrentTimestamp()}</span>
+                                </div>
+                                <div class="thumbs">
+                                    <button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
+                                    <button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
+                                </div>
+                            </div>
+                        `;
+                        addMessage('system', response.text, conversation_id);
+
+                        var chatHistory = document.getElementById('chat-history');
+                        chatHistory.scrollTop = chatHistory.scrollHeight;
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error("Error:", error);
                 }
             });
-        },
-        error: function(xhr, status, error) {
-            console.error("Error clearing session:", error);
         }
-    });
-});
 
+        document.getElementById('chat-history').addEventListener('click', function(event) {
+            if (event.target && event.target.matches('.show-english')) {
+                var englishMessage = event.target.dataset.englishMessage;
+                showTranslation(event.target, englishMessage);
+            } else if (event.target && event.target.matches('.show-hindi')) {
+                var hindiMessage = event.target.dataset.hindiMessage;
+                showTranslation(event.target, hindiMessage);
+            }
+        });
 
-// Clear session storage on back button
-window.addEventListener('popstate', function () {
-    // Clear conversation_id when navigating back to persona list
-    sessionStorage.removeItem('conversation_id');
-});
+        function showTranslation(button, message) {
+            button.style.display = 'none';
+            var pTag = document.createElement('p');
+            pTag.textContent = message;
+            button.parentNode.insertBefore(pTag, button.nextSibling);
+        }
 
-function startTimer(display) {
-    let duration = remainingTime; // Use the remaining time
-    let start = Date.now();
-    let diff, minutes, seconds;
-    let creditsDeducted = false;
+        function thumbsUp(agentMessage, customerMessage) {
+            sendFeedback(agentMessage, customerMessage, 'positive');
+        }
 
-    function timer() {
-        diff = duration - (((Date.now() - start) / 1000) | 0);
-        minutes = (diff / 60) | 0;
-        seconds = (diff % 60) | 0;
-        minutes = minutes < 10 ? "0" + minutes : minutes;
-        seconds = seconds < 10 ? "0" + seconds : seconds;
-        display.textContent = minutes + ":" + seconds;
+        function thumbsDown(agentMessage, customerMessage) {
+            sendFeedback(agentMessage, customerMessage, 'negative');
+        }
 
-        if (!creditsDeducted && diff <= 0) {
-            console.log("Attempting to deduct credit...");
-            fetch('/auth/deduct_credit', {
-                method: 'POST',
+        function sendFeedback(agentMessage, customerMessage, feedback) {
+            var feedbackData = {
+                agent_message: agentMessage,
+                customer_message: customerMessage,
+                feedback: feedback
+            };
+
+            $.ajax({
+                url: "/save_feedback",
+                type: "POST",
+                data: JSON.stringify(feedbackData),
+                contentType: "application/json",
                 headers: {
-                    'Content-Type': 'application/json',
                     "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    console.log("Feedback saved successfully:", response);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error saving feedback:", error);
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Credit deduction response:", data);
-                credits = data.credits;
-                document.getElementById('credits').textContent = credits;
-                if (credits <= 0) {
-                    disableStartButton();
+            });
+        }
+
+        function removeAllAudioFiles() {
+            $.ajax({
+                url: "/remove_all_audio_files",
+                type: "POST",
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    console.log(response);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error removing audio files:", error);
                 }
-            })
-            .catch(error => console.error('Error deducting credit:', error));
-            creditsDeducted = true;
+            });
         }
 
-        if (diff <= 0 || display.textContent === "00:00") {
-            clearInterval(timerInterval);
-            display.textContent = "00:00";
-            disableStartButton();
+		function playAudio(audioUrl) {
+			var audioPlayer = document.getElementById("audio-player");
+			audioPlayer.src = audioUrl;
+			audioPlayer.play();
 
-            // Get the conversation_id from sessionStorage
-            var conversation_id = sessionStorage.getItem('conversation_id');
-            if (conversation_id) {
-                closeConversation(conversation_id); // Close the conversation when time is up
-            }
-            alert('Time is up! Please re-select another persona to continue.');
-        }
-    }
+			// Stop speech recognition when system response audio is playing
+			if (recognition) {
+				recognition.stop();
+			}
 
-    function stopTimer() {
-        clearInterval(timerInterval);
-        remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
-    }
+			// Show audio wave animation
+			document.getElementById('audio-wave').innerHTML = '<img src="/static/audio-wave.gif" alt="Audio Wave Animation">';
 
-    timerInterval = setInterval(timer, 1000);
+			audioPlayer.addEventListener("ended", function() {
+				removeAllAudioFiles(); // Remove all audio files after playing
+				document.getElementById('audio-wave').innerHTML = '<img src="/static/audio-wave-placeholder.gif" alt="Audio Wave Animation" id="audio-wave-placeholder">';
+				if (typeof stopTimer === 'function') {
+					stopTimer(); // Stop the timer after system response
+				}
+				timerStarted = false; // Reset the timerStarted flag
 
-    return stopTimer;
-}
+				// Enable the start button to restart the conversation
+				enableStartButton();
+			});
+		}
 
-
-
-
-var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-const urlParams = new URLSearchParams(window.location.search);
-const persona = urlParams.get('persona');
-document.getElementById('persona-name').innerText = persona;
-
-function getCurrentTimestamp() {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-}
-
-const closingStatements = ["नेक्स्ट मीटिंग", "I'll be in touch soon", "follow up", "अगली मीटिंग","next time", "will get back", "next meeting", "फॉलो-अप मीटिंग", "I'll compile all the details","can finalize everything in our next meeting", "It's been a pleasure discussing your needs", "I'll be back with a personalized plan soon", "Take care", "Have a great day", "bye", "I'll prepare the documents", "I'll get the customized policy ready", "goodbye","जल्द ही आपसे संपर्क करूँगा", "आपका दिन शुभ हो", "मैं दस्तावेज़ तैयार करूंगा","हम इसे अगली बैठक में पूरा करेंगे", "अलविदा", "विदा", "बाय","फिर मिलेंगे","अब चलता हूँ"];
-
-function detectClosingStatement(transcript) {
-    const lowerTranscript = transcript.toLowerCase();
-    return closingStatements.some(statement => lowerTranscript.includes(statement));
-}
-
-function startVoiceConversation() {
-    if (credits > 0) {
-        let display = document.querySelector('#time');
-        if (!timerStarted) {
-            stopTimer = startTimer(display);
-            timerStarted = true;
-        } else {
-            clearInterval(timerInterval); // Clear the previous timer interval
-            stopTimer = startTimer(display); // Restart the timer with the remaining time
+        function goBack() {
+            window.location.href = "/static/rehears.html";
         }
 
-        recognition = new webkitSpeechRecognition();
-        recognition.lang = 'hi-IN';
-        recognition.interimResults = false; // Only final results are needed
-        recognition.continuous = true; // Stop recognition on silence
+        function clearChat() {
+            document.getElementById('chat-history').innerHTML = '';
+            document.getElementById('message-input').value = '';
+        }
 
-        recognition.onresult = function(event) {
-            var transcript = event.results[0][0].transcript;
+        function disableStartButton() {
+            const startButton = document.getElementById("startButton");
+            startButton.disabled = true;
+            startButton.style.backgroundColor = "#cccccc";
+            startButton.style.cursor = "not-allowed";
+        }
 
-            document.getElementById('chat-history').innerHTML += `
-                <div class="message-wrapper">
-                    <div class="message-content agent-message">
-                        <p>${transcript}</p>
-                        <span class="message-timestamp">${getCurrentTimestamp()}</span>
-                    </div>
-                </div>
-            `;
+        function enableStartButton() {
+            const startButton = document.getElementById("startButton");
+            startButton.disabled = false;
+            startButton.style.backgroundColor = "";
+            startButton.style.cursor = "pointer";
+        }
 
-            var chatHistory = document.getElementById('chat-history');
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-
-            var conversation_id = sessionStorage.getItem('conversation_id');
-            
+        function addMessage(sender, content, conversation_id) {
+            console.log("Retrieved conversation_id 123:", conversation_id);
             if (!conversation_id) {
-                $.ajax({
-                    url: "/start_conversation/" + persona,
-                    type: "POST",
-                    data: JSON.stringify({ message: transcript }),
-                    contentType: "application/json",
-                    headers: {
-                        "X-CSRFToken": csrfToken
-                    },
-                    success: function(response) {
-                        if (response.conversation_id) {
-                            sessionStorage.setItem('conversation_id', response.conversation_id);
-                            handleUserMessage(transcript, response.conversation_id);
-                        } else {
-                            console.error("No conversation_id in response");
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error:", error);
-                    }
-                });
-            } else {
-                handleUserMessage(transcript, conversation_id);
+                console.error('No conversation ID found');
+                return;
             }
-        };
 
-        recognition.onerror = function(event) {
-            console.error("Speech recognition error detected: " + event.error);
-        };
-
-        recognition.onspeechend = function() {
-            setTimeout(function() {
-                recognition.stop();
-            }, 2000); // Allow a 2-second pause before stopping recognition
-        };
-
-        recognition.onend = function() {
-            console.log("Speech recognition service disconnected");
-        };
-
-        recognition.start();
-    }
-}
-
-
-
-
-function handleUserMessage(transcript, conversation_id) {
-    addMessage('user', transcript, conversation_id);
-
-    if (detectClosingStatement(transcript)) {
-        disableStartButton();
-        closeConversation(conversation_id);
-        stopTimer();
-        return;
-    }
-
-    $.ajax({
-        url: "/start_conversation/" + persona,
-        type: "POST",
-        data: JSON.stringify({ message: transcript }),
-        contentType: "application/json",
-        headers: {
-            "X-CSRFToken": csrfToken
-        },
-        success: function(response) {
-            if (response.conversation_id) {
-                sessionStorage.setItem('conversation_id', response.conversation_id);
-            }
-            console.log("System Response:", response.text);
-            if (response.audio) {
-                playAudio(response.audio);
-            }
-            if (response.text) {
-                document.getElementById('chat-history').innerHTML += `
-                    <div class="message-wrapper">
-                        <div class="message-content customer-message">
-                            <p>${response.text}</p>
-                            <span class="message-timestamp">${getCurrentTimestamp()}</span>
-                        </div>
-                        <div class="thumbs">
-                            <button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
-                            <button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
-                        </div>
-                    </div>
-                `;
-                addMessage('system', response.text, conversation_id);
-
-                var chatHistory = document.getElementById('chat-history');
-                chatHistory.scrollTop = chatHistory.scrollHeight;
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error("Error:", error);
+            $.ajax({
+                url: '/add_message',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    conversation_id: conversation_id,
+                    sender: sender,
+                    content: content
+                }),
+                headers: {
+                    "X-CSRFToken": csrfToken
+                },
+                success: function(response) {
+                    console.log('Message added:', response);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error adding message:', error);
+                }
+            });
         }
-    });
-}
 
-
-
-
-document.getElementById('chat-history').addEventListener('click', function(event) {
-    if (event.target && event.target.matches('.show-english')) {
-        var englishMessage = event.target.dataset.englishMessage;
-        showTranslation(event.target, englishMessage);
-    } else if (event.target && event.target.matches('.show-hindi')) {
-        var hindiMessage = event.target.dataset.hindiMessage;
-        showTranslation(event.target, hindiMessage);
-    }
-});
-
-function showTranslation(button, message) {
-    button.style.display = 'none';
-    var pTag = document.createElement('p');
-    pTag.textContent = message;
-    button.parentNode.insertBefore(pTag, button.nextSibling);
-}
-
-function thumbsUp(agentMessage, customerMessage) {
-    sendFeedback(agentMessage, customerMessage, 'positive');
-}
-
-function thumbsDown(agentMessage, customerMessage) {
-    sendFeedback(agentMessage, customerMessage, 'negative');
-}
-
-function sendFeedback(agentMessage, customerMessage, feedback) {
-    var feedbackData = {
-        agent_message: agentMessage,
-        customer_message: customerMessage,
-        feedback: feedback
-    };
-
-    $.ajax({
-        url: "/save_feedback",
-        type: "POST",
-        data: JSON.stringify(feedbackData),
-        contentType: "application/json",
-        headers: {
-            "X-CSRFToken": csrfToken
-        },
-        success: function(response) {
-            console.log("Feedback saved successfully:", response);
-        },
-        error: function(xhr, status, error) {
-            console.error("Error saving feedback:", error);
-        }
-    });
-}
-
-function removeAllAudioFiles() {
-    $.ajax({
-        url: "/remove_all_audio_files",
-        type: "POST",
-        headers: {
-            "X-CSRFToken": csrfToken
-        },
-        success: function(response) {
-            console.log(response);
-        },
-        error: function(xhr, status, error) {
-            console.error("Error removing audio files:", error);
-        }
-    });
-}
-
-
-
-
-function playAudio(audioUrl) {
-    var audioPlayer = document.getElementById("audio-player");
-    audioPlayer.src = audioUrl;
-    audioPlayer.play();
-
-    // Stop speech recognition when system response audio is playing
-    if (recognition) {
-        recognition.stop();
-    }
-
-    audioPlayer.addEventListener("ended", function() {
-         removeAllAudioFiles(); // Remove all audio files after playing
-        if (typeof stopTimer === 'function') {
-            stopTimer(); // Stop the timer after system response
-        }
-        timerStarted = false; // Reset the timerStarted flag
-
-        // Enable the start button to restart the conversation
-        enableStartButton();
-    });
-}
-
-
-
-
-
-
-
-
-function goBack() {
-    window.location.href = "/static/rehears.html";
-}
-
-function clearChat() {
-    document.getElementById('chat-history').innerHTML = '';
-    document.getElementById('message-input').value = '';
-}
-
-function disableStartButton() {
-    const startButton = document.getElementById("startButton");
-    startButton.disabled = true;
-    startButton.style.backgroundColor = "#cccccc";
-    startButton.style.cursor = "not-allowed";
-}
-
-function enableStartButton() {
-    const startButton = document.getElementById("startButton");
-    startButton.disabled = false;
-    startButton.style.backgroundColor = "";
-    startButton.style.cursor = "pointer";
-}
-
-function addMessage(sender, content, conversation_id) {
-    console.log("Retrieved conversation_id 123:", conversation_id);
-    if (!conversation_id) {
-        console.error('No conversation ID found');
-        return;
-    }
-
-    $.ajax({
-        url: '/add_message',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            conversation_id: conversation_id,
-            sender: sender,
-            content: content
-        }),
-        headers: {
-            "X-CSRFToken": csrfToken
-        },
-        success: function(response) {
-            console.log('Message added:', response);
-        },
-        error: function(xhr, status, error) {
-            console.error('Error adding message:', error);
-        }
-    });
-}
-
-
-		function closeConversation(conversation_id) {
+        function closeConversation(conversation_id) {
             // Show loading indicator
             document.getElementById('loading-indicator').style.display = 'block';
 
@@ -720,8 +717,8 @@ function addMessage(sender, content, conversation_id) {
                 },
                 success: function(response) {
                     console.log('Conversation closed:', response);
-                    if (response.feedback) {
-                        showFeedback(response.feedback);
+                    if (response.combined_feedback_hindi) { // Use the translated feedback
+                        showFeedback(response.combined_feedback_hindi);
                     }
 
                     // Hide loading indicator after feedback is shown
@@ -736,70 +733,63 @@ function addMessage(sender, content, conversation_id) {
             });
         }
 
+        function showFeedback(feedback) {
+            const feedbackContainer = document.getElementById('feedback-container');
+            feedbackContainer.innerHTML = ''; // Clear previous feedback
 
+            // Extract overall and individual feedback
+            const overallFeedback = feedback.split('Overall Feedback:')[1].split('Individual Feedback:')[0].trim();
+            const individualFeedback = feedback.split('Individual Feedback:')[1].trim();
 
-function showFeedback(feedback) {
-    const feedbackContainer = document.getElementById('feedback-container');
-    feedbackContainer.innerHTML = ''; // Clear previous feedback
+            // Create overall feedback section
+            const overallSection = document.createElement('div');
+            overallSection.style.border = '1px solid #28a745';
+            overallSection.style.padding = '10px';
+            overallSection.style.marginBottom = '10px';
+            overallSection.style.fontSize = '14px';
+            overallSection.style.backgroundColor = '#d4edda';
+            overallSection.style.borderRadius = '5px';
 
-    // Extract overall and individual feedback
-    const overallFeedback = feedback.split('Overall Feedback:')[1].split('Individual Feedback:')[0].trim();
-    const individualFeedback = feedback.split('Individual Feedback:')[1].trim();
+            const overallTitle = document.createElement('h3');
+            overallTitle.innerText = 'Overall Feedback';
+            overallTitle.style.fontWeight = 'bold';
+            overallSection.appendChild(overallTitle);
 
-    // Create overall feedback section
-    const overallSection = document.createElement('div');
-    overallSection.style.border = '1px solid #28a745';
-    overallSection.style.padding = '10px';
-    overallSection.style.marginBottom = '10px';
-    overallSection.style.fontSize = '14px';
-    overallSection.style.backgroundColor = '#d4edda';
-    overallSection.style.borderRadius = '5px';
+            const overallText = document.createElement('p');
+            overallText.innerText = overallFeedback;
+            overallSection.appendChild(overallText);
 
-    const overallTitle = document.createElement('h3');
-    overallTitle.innerText = 'Overall Feedback';
-    overallTitle.style.fontWeight = 'bold';
-    overallSection.appendChild(overallTitle);
+            feedbackContainer.appendChild(overallSection);
 
-    const overallText = document.createElement('p');
-    overallText.innerText = overallFeedback;
-    overallSection.appendChild(overallText);
+            // Create individual feedback section
+            const individualSection = document.createElement('div');
+            individualSection.style.border = '1px solid #007bff';
+            individualSection.style.padding = '10px';
+            individualSection.style.marginBottom = '10px';
+            individualSection.style.fontSize = '14px';
+            individualSection.style.backgroundColor = '#cce5ff';
+            individualSection.style.borderRadius = '5px';
 
-    feedbackContainer.appendChild(overallSection);
+            const individualTitle = document.createElement('h3');
+            individualTitle.innerText = 'Individual Feedback';
+            individualTitle.style.fontWeight = 'bold';
+            individualSection.appendChild(individualTitle);
 
-    // Create individual feedback section
-    const individualSection = document.createElement('div');
-    individualSection.style.border = '1px solid #007bff';
-    individualSection.style.padding = '10px';
-    individualSection.style.marginBottom = '10px';
-    individualSection.style.fontSize = '14px';
-    individualSection.style.backgroundColor = '#cce5ff';
-    individualSection.style.borderRadius = '5px';
+            // Split individual feedback into sections based on new lines
+            const individualFeedbackParts = individualFeedback.split('\n\n');
+            individualFeedbackParts.forEach(part => {
+                const feedbackText = document.createElement('p');
+                feedbackText.innerText = part;
+                individualSection.appendChild(feedbackText);
+            });
 
-    const individualTitle = document.createElement('h3');
-    individualTitle.innerText = 'Individual Feedback';
-    individualTitle.style.fontWeight = 'bold';
-    individualSection.appendChild(individualTitle);
-
-    // Split individual feedback into sections based on new lines
-    const individualFeedbackParts = individualFeedback.split('\n\n');
-    individualFeedbackParts.forEach(part => {
-        const feedbackText = document.createElement('p');
-        feedbackText.innerText = part;
-        individualSection.appendChild(feedbackText);
-    });
-
-    feedbackContainer.appendChild(individualSection);
-}
-
-
-
+            feedbackContainer.appendChild(individualSection);
+        }
     </script>
-	
     <nav>
         <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
         <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
         <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
     </nav>
-	
 </body>
 </html>
