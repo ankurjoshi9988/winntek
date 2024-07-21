@@ -7,7 +7,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
-from googletrans import Translator
+from translate import Translator
 import asyncio
 
 load_dotenv()
@@ -17,9 +17,9 @@ genai.configure(api_key=api_key)
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
 
 async def translate_to_hindi(text):
-    translator = Translator()
-    translation = translator.translate(text, dest='hi')
-    return translation.text
+    translator = Translator(to_lang="hi")
+    translation = translator.translate(text)
+    return translation
 
 def start_conversation(user_id, persona):
     conversation = Conversation(user_id=user_id, persona=persona)
