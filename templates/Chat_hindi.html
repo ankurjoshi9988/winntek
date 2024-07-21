@@ -39,8 +39,16 @@
         }
 
         .timer {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
+        }
+		.pname {
+            font-size: 18px;
+            font-weight: bold;
+        }
+		.credits {
+            font-size: 14px;
+            font-weight: normal;
         }
 
         body {
@@ -80,7 +88,7 @@
 
         .chat-history {        
             overflow-y: auto; /* Enable scrolling if content overflows */
-            height: 65vh; /* Set height to half the screen */
+            height: 40vh; /* Set height to half the screen */
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -222,7 +230,7 @@
 		}
 
 		.persona-media img {
-			width: 100px; /* Adjust width as needed */
+			width: 80px; /* Adjust width as needed */
 			height: auto;
 			border-radius: 50%;
 			margin-bottom: 10px; /* Space between image and audio wave */
@@ -247,7 +255,8 @@
     <div class="container">
         <div class="persona-details" id="persona-details">            
             <div>
-                <h1 id="persona-header"><a href="/rehearse.html">Back </a> Main Chat with <span id="persona-name"></span></h1>
+                <h1 id="persona-header"><a href="/rehearse.html">Back </a></h1>
+				
                 <div class="timer">Time left: <span id="time">05:00</span></div>
                 <span class="credits">Credits: <span id="credits"></span></span>
             </div>
@@ -255,6 +264,7 @@
 		<!-- New div for persona image and audio wave animation -->
 		<div class="persona-media" id="persona-media">
 			<img id="persona-image" src="/path/to/default-image.jpg" alt="Persona Image">
+			<div class="pname"><span id="persona-name"></span></div>
 			<div class="audio-wave" id="audio-wave">
 				<img src="/static/audio-wave-placeholder.gif" alt="Audio Wave Animation" id="audio-wave-placeholder">
 			</div>
