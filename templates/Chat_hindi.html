@@ -727,8 +727,8 @@
                 },
                 success: function(response) {
                     console.log('Conversation closed:', response);
-                    if (response.combined_feedback_hindi) { // Use the translated feedback
-                        showFeedback(response.combined_feedback_hindi);
+                    if (response.feedback) { // Use the translated feedback
+                        showFeedback(response.feedback);
                     }
 
                     // Hide loading indicator after feedback is shown
@@ -743,58 +743,62 @@
             });
         }
 
-        function showFeedback(feedback) {
-            const feedbackContainer = document.getElementById('feedback-container');
-            feedbackContainer.innerHTML = ''; // Clear previous feedback
+function showFeedback(feedback) {
+    const feedbackContainer = document.getElementById('feedback-container');
+    feedbackContainer.innerHTML = ''; // Clear previous feedback
 
-            // Extract overall and individual feedback
-            const overallFeedback = feedback.split('Overall Feedback:')[1].split('Individual Feedback:')[0].trim();
-            const individualFeedback = feedback.split('Individual Feedback:')[1].trim();
+    // Extract overall and individual feedback
+    const overallFeedbackMatch = feedback.match(/कुल फ़ीडबैक:\n(.+?)\nव्यक्तिगत फ़ीडबैक:/s);
+    const individualFeedbackMatch = feedback.match(/व्यक्तिगत फ़ीडबैक:\n(.+)/s);
 
-            // Create overall feedback section
-            const overallSection = document.createElement('div');
-            overallSection.style.border = '1px solid #28a745';
-            overallSection.style.padding = '10px';
-            overallSection.style.marginBottom = '10px';
-            overallSection.style.fontSize = '14px';
-            overallSection.style.backgroundColor = '#d4edda';
-            overallSection.style.borderRadius = '5px';
+    const overallFeedback = overallFeedbackMatch ? overallFeedbackMatch[1].trim() : 'No overall feedback available.';
+    const individualFeedback = individualFeedbackMatch ? individualFeedbackMatch[1].trim() : 'No individual feedback available.';
 
-            const overallTitle = document.createElement('h3');
-            overallTitle.innerText = 'Overall Feedback';
-            overallTitle.style.fontWeight = 'bold';
-            overallSection.appendChild(overallTitle);
+    // Create overall feedback section
+    const overallSection = document.createElement('div');
+    overallSection.style.border = '1px solid #28a745';
+    overallSection.style.padding = '10px';
+    overallSection.style.marginBottom = '10px';
+    overallSection.style.fontSize = '14px';
+    overallSection.style.backgroundColor = '#d4edda';
+    overallSection.style.borderRadius = '5px';
 
-            const overallText = document.createElement('p');
-            overallText.innerText = overallFeedback;
-            overallSection.appendChild(overallText);
+    const overallTitle = document.createElement('h3');
+    overallTitle.innerText = 'कुल फ़ीडबैक';
+    overallTitle.style.fontWeight = 'bold';
+    overallSection.appendChild(overallTitle);
 
-            feedbackContainer.appendChild(overallSection);
+    const overallText = document.createElement('p');
+    overallText.innerText = overallFeedback;
+    overallSection.appendChild(overallText);
 
-            // Create individual feedback section
-            const individualSection = document.createElement('div');
-            individualSection.style.border = '1px solid #007bff';
-            individualSection.style.padding = '10px';
-            individualSection.style.marginBottom = '10px';
-            individualSection.style.fontSize = '14px';
-            individualSection.style.backgroundColor = '#cce5ff';
-            individualSection.style.borderRadius = '5px';
+    feedbackContainer.appendChild(overallSection);
 
-            const individualTitle = document.createElement('h3');
-            individualTitle.innerText = 'Individual Feedback';
-            individualTitle.style.fontWeight = 'bold';
-            individualSection.appendChild(individualTitle);
+    // Create individual feedback section
+    const individualSection = document.createElement('div');
+    individualSection.style.border = '1px solid #007bff';
+    individualSection.style.padding = '10px';
+    individualSection.style.marginBottom = '10px';
+    individualSection.style.fontSize = '14px';
+    individualSection.style.backgroundColor = '#cce5ff';
+    individualSection.style.borderRadius = '5px';
 
-            // Split individual feedback into sections based on new lines
-            const individualFeedbackParts = individualFeedback.split('\n\n');
-            individualFeedbackParts.forEach(part => {
-                const feedbackText = document.createElement('p');
-                feedbackText.innerText = part;
-                individualSection.appendChild(feedbackText);
-            });
+    const individualTitle = document.createElement('h3');
+    individualTitle.innerText = 'व्यक्तिगत फ़ीडबैक';
+    individualTitle.style.fontWeight = 'bold';
+    individualSection.appendChild(individualTitle);
 
-            feedbackContainer.appendChild(individualSection);
-        }
+    // Split individual feedback into sections based on new lines
+    const individualFeedbackParts = individualFeedback.split('\n\n');
+    individualFeedbackParts.forEach(part => {
+        const feedbackText = document.createElement('p');
+        feedbackText.innerText = part;
+        individualSection.appendChild(feedbackText);
+    });
+
+    feedbackContainer.appendChild(individualSection);
+}
+
     </script>
     <nav>
         <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>

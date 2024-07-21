@@ -9,6 +9,9 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from translate import Translator
 import asyncio
+import textwrap
+
+MAX_QUERY_LENGTH = 500
 
 load_dotenv()
 
@@ -20,6 +23,9 @@ async def translate_to_hindi(text):
     translator = Translator(to_lang="hi")
     translation = translator.translate(text)
     return translation
+
+
+
 
 def start_conversation(user_id, persona):
     conversation = Conversation(user_id=user_id, persona=persona)
@@ -45,18 +51,23 @@ async def generate_feedback(conversation):
     for message in conversation.messages:
         sender = "Customer" if message.sender == 'system' else "Agent"
         formatted_conversation += f"{sender}: {message.content}\n"
-        print(f"Processing message: sender={sender}, content={message.content}")  # Debugging line
 
-    overall_prompt = (
-        "Based on the following conversation between an insurance agent and a customer, provide feedback in simple Hindi language on the agent's performance. "
-        "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation. These categories should be in English."
-        "Consider the overall chat conversation as context. The feedback should reflect how the conversation started, how the agent responded to queries, and how the conversation ended. Do not generate or write '***' in feedback text.\n\n"
-        f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
-    )
+    # Split the conversation into chunks if it exceeds MAX_QUERY_LENGTH
+    conversation_chunks = textwrap.wrap(formatted_conversation, MAX_QUERY_LENGTH, break_long_words=False, replace_whitespace=False)
 
-    overall_response = await llm_invoke(overall_prompt)
-    overall_feedback2 = overall_response.content if overall_response else "Could not generate feedback at this time."
-    overall_feedback = await translate_to_hindi(overall_feedback2)
+    overall_feedback = ""
+    for chunk in conversation_chunks:
+        overall_prompt = (
+            "Based on the following conversation between an insurance agent and a customer, provide feedback in simple Hindi language on the agent's performance. "
+            "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation. These categories should be in English."
+            "Consider the overall chat conversation as context. The feedback should reflect how the conversation started, how the agent responded to queries, and how the conversation ended. Do not generate or write '***' in feedback text.\n\n"
+            f"Conversation:\n{chunk}\n\nOverall Feedback:"
+        )
+
+        overall_response = await llm_invoke(overall_prompt)
+        chunk_feedback = overall_response.content if overall_response else "Could not generate feedback at this time."
+        translated_chunk_text = await translate_to_hindi(chunk_feedback)
+        overall_feedback += translated_chunk_text + "\n"
 
     individual_feedback_list = []
     for message in conversation.messages:
@@ -70,20 +81,14 @@ async def generate_feedback(conversation):
 
             individual_response = await llm_invoke(individual_prompt)
             feedback_text = individual_response.content if individual_response else "Could not generate individual feedback at this time."
-            feedback_text_hindi = await translate_to_hindi(feedback_text)
-            individual_feedback_list.append(f"Your response: {message.content}\nFeedback: {feedback_text_hindi}")
+            translated_feedback_text = await translate_to_hindi(feedback_text)
+            individual_feedback_list.append(f"आपका जवाब: {message.content}\nफ़ीडबैक: {translated_feedback_text}")
 
-    combined_feedback = f"Overall Feedback:\n{overall_feedback}\n\nIndividual Feedback:\n" + "\n\n".join(individual_feedback_list)
+    combined_feedback = f"कुल फ़ीडबैक:\n{overall_feedback}\n\nव्यक्तिगत फ़ीडबैक:\n" + "\n\n".join(individual_feedback_list)
 
-    # Translate combined feedback to Hindi
-    combined_feedback_hindi = await translate_to_hindi(combined_feedback)
+    return combined_feedback
 
-    return combined_feedback_hindi
 
-async def translate_to_hindi(text):
-    translator = Translator()
-    translation = translator.translate(text, dest='hi')
-    return translation.text
 
 async def llm_invoke(prompt):
     response = await asyncio.to_thread(llm.invoke, prompt)
