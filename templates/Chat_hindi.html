@@ -13,7 +13,34 @@
             height: 200px;
             margin: 0 auto;
         }
+		.feedback-overall {
+			padding: 10px;
+			margin-bottom: 10px;
+			border: 1px solid #4CAF50;
+			border-radius: 5px;
+			background-color: #e8f5e9;
+			font-size: 14px;
+			color: #388e3c;
+		}
 
+		.feedback-individual {
+			padding: 10px;
+			margin-bottom: 10px;
+			border: 1px solid #2196F3;
+			border-radius: 5px;
+			background-color: #e3f2fd;
+			font-size: 14px;
+			color: #1976d2;
+		}
+
+		.feedback-title {
+			font-weight: bold;
+			margin-bottom: 5px;
+		}
+
+		.individual-feedback-item {
+			margin-bottom: 10px;
+		}
         #loading-indicator img {
             width: 100%;
             height: 100%;
@@ -459,7 +486,7 @@ function startVoiceConversation() {
         recognition.onspeechend = function() {
             setTimeout(function() {
                 recognition.stop();
-            }, 3000); // Allow a 2-second pause before stopping recognition
+            }, 2000); // Allow a 2-second pause before stopping recognition
         };
 
         recognition.onend = function() {
@@ -711,28 +738,59 @@ function addMessage(sender, content, conversation_id) {
 
 
 
-        function showFeedback(feedback) {
-            const feedbackContainer = document.getElementById('feedback-container');
-            const feedbackSections = feedback.split('\n\n');
+function showFeedback(feedback) {
+    const feedbackContainer = document.getElementById('feedback-container');
+    feedbackContainer.innerHTML = ''; // Clear previous feedback
 
-            feedbackContainer.innerHTML = ''; // Clear previous feedback
+    // Extract overall and individual feedback
+    const overallFeedback = feedback.split('Overall Feedback:')[1].split('Individual Feedback:')[0].trim();
+    const individualFeedback = feedback.split('Individual Feedback:')[1].trim();
 
-            feedbackSections.forEach(section => {
-                const sectionDiv = document.createElement('div');
-                sectionDiv.style.border = '1px solid #ccc';
-                sectionDiv.style.padding = '10px';
-                sectionDiv.style.marginBottom = '10px';
-                sectionDiv.style.fontSize = '12px';
-                sectionDiv.style.backgroundColor = '#fff';
-                sectionDiv.style.borderRadius = '5px';
+    // Create overall feedback section
+    const overallSection = document.createElement('div');
+    overallSection.style.border = '1px solid #28a745';
+    overallSection.style.padding = '10px';
+    overallSection.style.marginBottom = '10px';
+    overallSection.style.fontSize = '14px';
+    overallSection.style.backgroundColor = '#d4edda';
+    overallSection.style.borderRadius = '5px';
 
-                const sectionText = document.createElement('p');
-                sectionText.innerText = section;
+    const overallTitle = document.createElement('h3');
+    overallTitle.innerText = 'Overall Feedback';
+    overallTitle.style.fontWeight = 'bold';
+    overallSection.appendChild(overallTitle);
 
-                sectionDiv.appendChild(sectionText);
-                feedbackContainer.appendChild(sectionDiv);
-            });
-        }
+    const overallText = document.createElement('p');
+    overallText.innerText = overallFeedback;
+    overallSection.appendChild(overallText);
+
+    feedbackContainer.appendChild(overallSection);
+
+    // Create individual feedback section
+    const individualSection = document.createElement('div');
+    individualSection.style.border = '1px solid #007bff';
+    individualSection.style.padding = '10px';
+    individualSection.style.marginBottom = '10px';
+    individualSection.style.fontSize = '14px';
+    individualSection.style.backgroundColor = '#cce5ff';
+    individualSection.style.borderRadius = '5px';
+
+    const individualTitle = document.createElement('h3');
+    individualTitle.innerText = 'Individual Feedback';
+    individualTitle.style.fontWeight = 'bold';
+    individualSection.appendChild(individualTitle);
+
+    // Split individual feedback into sections based on new lines
+    const individualFeedbackParts = individualFeedback.split('\n\n');
+    individualFeedbackParts.forEach(part => {
+        const feedbackText = document.createElement('p');
+        feedbackText.innerText = part;
+        individualSection.appendChild(feedbackText);
+    });
+
+    feedbackContainer.appendChild(individualSection);
+}
+
 
 
     </script>
