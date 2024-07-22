@@ -361,67 +361,65 @@
             sessionStorage.removeItem('conversation_id');
         });
 
-        function startTimer(display) {
-            let duration = remainingTime; // Use the remaining time
-            let start = Date.now();
-            let diff, minutes, seconds;
-            let creditsDeducted = false;
+	   function startTimer(display) {
+		let duration = remainingTime; // Use the remaining time
+		let start = Date.now();
+		let diff, minutes, seconds;
+		let creditsDeducted = false;
 
-            function timer() {
-                diff = duration - (((Date.now() - start) / 1000) | 0);
-                minutes = (diff / 60) | 0;
-                seconds = (diff % 60) | 0;
-                minutes = minutes < 10 ? "0" + minutes : minutes;
-                seconds = seconds < 10 ? "0" + seconds : seconds;
-                display.textContent = minutes + ":" + seconds;
+		function timer() {
+			diff = duration - (((Date.now() - start) / 1000) | 0);
+			minutes = (diff / 60) | 0;
+			seconds = (diff % 60) | 0;
+			minutes = minutes < 10 ? "0" + minutes : minutes;
+			seconds = seconds < 10 ? "0" + seconds : seconds;
+			display.textContent = minutes + ":" + seconds;
 
-                if (!creditsDeducted && diff <= 0) {
-                    console.log("Attempting to deduct credit...");
-                    fetch('/auth/deduct_credit', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            "X-CSRFToken": csrfToken
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("Credit deduction response:", data);
-                        credits = data.credits;
-                        document.getElementById('credits').textContent = credits;
-                        if (credits <= 0) {
-                            disableStartButton();
-                        }
-                    })
-                    .catch(error => console.error('Error deducting credit:', error));
-                    creditsDeducted = true;
-                }
+			if (!creditsDeducted && diff <= 0) {
+				console.log("Attempting to deduct credit...");
+				fetch('/auth/deduct_credit', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						"X-CSRFToken": csrfToken
+					}
+				})
+				.then(response => response.json())
+				.then(data => {
+					console.log("Credit deduction response:", data);
+					credits = data.credits;
+					document.getElementById('credits').textContent = credits;
+					if (credits <= 0) {
+						disableStartButton();
+					}
+				})
+				.catch(error => console.error('Error deducting credit:', error));
+				creditsDeducted = true;
+			}
 
-                if (diff <= 0 || display.textContent === "00:00") {
-                    clearInterval(timerInterval);
-                    display.textContent = "00:00";
-                    disableStartButton();
+			if (diff <= 0 || display.textContent === "00:00") {
+				clearInterval(timerInterval);
+				display.textContent = "00:00";
+				disableStartButton();
 
-                    // Get the conversation_id from sessionStorage
-                    var conversation_id = sessionStorage.getItem('conversation_id');
-                    if (conversation_id) {
-                        closeConversation(conversation_id); // Close the conversation when time is up
-						// Scroll to feedback container to ensure it's visible
-						document.getElementById('feedback-container').scrollIntoView({ behavior: 'smooth' });
-                    }
-                    alert('Time is up! Please re-select another persona to continue.');
-                }
-            }
+				// Get the conversation_id from sessionStorage
+				var conversation_id = sessionStorage.getItem('conversation_id');
+				if (conversation_id) {
+					closeConversation(conversation_id); // Close the conversation when time is up
+				}
+			}
+		}
 
-            function stopTimer() {
-                clearInterval(timerInterval);
-                remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
-            }
+		function stopTimer() {
+			clearInterval(timerInterval);
+			remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
+		}
 
-            timerInterval = setInterval(timer, 1000);
+		timerInterval = setInterval(timer, 1000);
 
-            return stopTimer;
-        }
+		return stopTimer;
+		}
+
 
         var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const urlParams = new URLSearchParams(window.location.search);
