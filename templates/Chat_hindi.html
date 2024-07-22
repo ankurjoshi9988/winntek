@@ -406,6 +406,8 @@
                     var conversation_id = sessionStorage.getItem('conversation_id');
                     if (conversation_id) {
                         closeConversation(conversation_id); // Close the conversation when time is up
+						// Scroll to feedback container to ensure it's visible
+						document.getElementById('feedback-container').scrollIntoView({ behavior: 'smooth' });
                     }
                     alert('Time is up! Please re-select another persona to continue.');
                 }

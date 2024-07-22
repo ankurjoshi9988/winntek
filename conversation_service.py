@@ -8,6 +8,7 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 from translate import Translator
+from googletrans import Translator
 import asyncio
 import textwrap
 
@@ -19,12 +20,15 @@ api_key=os.environ['GOOGLE_API_KEY']
 genai.configure(api_key=api_key)
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
 
-async def translate_to_hindi(text):
+"""async def translate_to_hindi(text):
     translator = Translator(to_lang="hi")
     translation = translator.translate(text)
     return translation
-
-
+"""
+async def translate_to_hindi(text):
+    translator = Translator()
+    translation = translator.translate(text, dest='hi')
+    return translation.text
 
 
 def start_conversation(user_id, persona):
@@ -58,8 +62,8 @@ async def generate_feedback(conversation):
     overall_feedback = ""
     for chunk in conversation_chunks:
         overall_prompt = (
-            "Based on the following conversation between an insurance agent and a customer, provide feedback in simple Hindi language on the agent's performance. "
-            "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation. These categories should be in English."
+            "Based on the following conversation between an insurance agent and a customer, provide feedback in Hindi language on the agent's performance. "
+            "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation."
             "Consider the overall chat conversation as context. The feedback should reflect how the conversation started, how the agent responded to queries, and how the conversation ended. Do not generate or write '***' in feedback text.\n\n"
             f"Conversation:\n{chunk}\n\nOverall Feedback:"
         )
