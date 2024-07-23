@@ -56,22 +56,20 @@ async def generate_feedback(conversation):
         sender = "Customer" if message.sender == 'system' else "Agent"
         formatted_conversation += f"{sender}: {message.content}\n"
 
-    # Split the conversation into chunks if it exceeds MAX_QUERY_LENGTH
-    conversation_chunks = textwrap.wrap(formatted_conversation, MAX_QUERY_LENGTH, break_long_words=False, replace_whitespace=False)
 
-    overall_feedback = ""
-    for chunk in conversation_chunks:
-        overall_prompt = (
-            "Based on the following conversation between an insurance agent and a customer, provide feedback in Hindi language on the agent's performance. "
-            "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation."
-            "Consider the overall chat conversation as context. The feedback should reflect how the conversation started, how the agent responded to queries, and how the conversation ended. Do not generate or write '***' in feedback text.\n\n"
-            f"Conversation:\n{chunk}\n\nOverall Feedback:"
-        )
+    overall_prompt = (
+        "Based on the following conversation between an insurance agent and a customer, provide feedback in Hindi language on the agent's performance. "
+        "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation."
+        "Consider the overall chat conversation as context. The feedback should reflect how the conversation started, how the agent responded to queries, and how the conversation ended. Do not generate or write '***' in feedback text.\n\n"
+        f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
+    )
 
-        overall_response = await llm_invoke(overall_prompt)
-        chunk_feedback = overall_response.content if overall_response else "Could not generate feedback at this time."
-        translated_chunk_text = await translate_to_hindi(chunk_feedback)
-        overall_feedback += translated_chunk_text + "\n"
+    overall_response = await llm_invoke(overall_prompt)
+    overall_feedback = overall_response.content if overall_response else "Could not generate feedback at this time."
+    # Process the feedback to limit it to 2 points per category
+    overall_feedback = process_feedback(overall_feedback)
+    translated_chunk_text = await translate_to_hindi(overall_feedback)
+    overall_feedback += translated_chunk_text + "\n"
 
     individual_feedback_list = []
     for message in conversation.messages:
@@ -92,7 +90,29 @@ async def generate_feedback(conversation):
 
     return combined_feedback
 
+def process_feedback(feedback):
+    lines = feedback.split('\n')
+    positives = []
+    improvements = []
+    current_section = None
 
+    for line in lines:
+        if 'Positives' in line:
+            current_section = positives
+        elif 'Needs Improvement' in line:
+            current_section = improvements
+        elif current_section is not None and line.strip():
+            current_section.append(line)
+
+    positives = positives[:1]
+    improvements = improvements[:1]
+
+    result = ["Positives:"]
+    result.extend(positives)
+    result.append("Needs Improvement:")
+    result.extend(improvements)
+
+    return '\n'.join(result)
 
 async def llm_invoke(prompt):
     response = await asyncio.to_thread(llm.invoke, prompt)
