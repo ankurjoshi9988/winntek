@@ -5,7 +5,7 @@ from flask import Flask, request, render_template, jsonify, send_from_directory,
 from flask_session import Session
 from flask_login import login_required, current_user
 from datetime import timedelta
-from conversation_service import start_conversation, add_message, close_conversation
+from conversation_service import start_conversation, add_message, close_conversation, get_past_conversations
 import re
 from gtts import gTTS
 import google.generativeai as genai
@@ -163,7 +163,12 @@ def load_personas():
         personas = [row for row in reader]
     return jsonify({'personas': personas})
 
-
+@app.route('/get_past_conversations', methods=['GET'])
+@login_required
+def get_past_conversations_route():
+    user_id = current_user.id  # Get the user ID from the current_user object
+    past_conversations = get_past_conversations(user_id)
+    return jsonify(past_conversations)
 
 
 @app.route('/save_feedback', methods=['POST'])

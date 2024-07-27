@@ -139,7 +139,21 @@ async def close_conversation(conversation_id):
         return f"An error occurred while closing the conversation: {str(e)}"
 
 
+def get_past_conversations(user_id):
+    conversations = Conversation.query.filter_by(user_id=user_id).all()
+    past_conversations = []
 
+    for convo in conversations:
+        feedback = Feedback.query.filter_by(conversation_id=convo.id).first()
+        past_conversations.append({
+            'conversation_id': convo.id,
+            'persona': convo.persona,
+            'created_at': convo.created_at,
+            'messages': [{'sender': msg.sender, 'content': msg.content, 'timestamp': msg.timestamp} for msg in convo.messages],
+            'feedback': feedback.content if feedback else 'No feedback available'
+        })
+
+    return past_conversations
 
 
 

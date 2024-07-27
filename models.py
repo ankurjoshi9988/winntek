@@ -1,5 +1,6 @@
 from flask_login import UserMixin
 from extensions import db
+from datetime import datetime
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -27,9 +28,15 @@ class User(UserMixin, db.Model):
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    persona = db.Column(db.String(100), nullable=False)  # Add the persona field
+    persona = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user = db.relationship('User', backref='conversations', lazy=True)
     messages = db.relationship('Message', backref='conversation', lazy=True)
+
+    def __init__(self, user_id, persona):
+        self.user_id = user_id
+        self.persona = persona
+        self.created_at = datetime.utcnow()
 
 
 class Message(db.Model):
