@@ -546,7 +546,8 @@
             <h2>Past Conversations</h2>                           
                 <div class="tab-content" id="tab-content">
                     <!-- Chat histories will be dynamically displayed here -->
-                    <button class="back-button" onclick="showTabs()">Back</button>          
+                    <button class="back-button" onclick="showTabs()">Back</button>
+				</div>					
         </div>
     </div>
 
@@ -557,139 +558,140 @@
         }
     });
 
-    let timerStarted = false;
-    let timerEnded = false;
-    let timerInterval;
-    let totalTimeElapsed = 0;
-    let remainingTime = 300; // 5 minutes in seconds
-    let credits;
-    let stopTimer;
-    let conversationActive = false;
-    let recognition; // Define recognition variable at a global scope
+	let timerStarted = false;
+	let timerEnded = false;
+	let timerInterval;
+	let totalTimeElapsed = 0;
+	let remainingTime = 300; // 5 minutes in seconds
+	let credits;
+	let stopTimer;
+	let conversationActive = false;
+	let recognition; // Define recognition variable at a global scope
 
-    document.addEventListener('DOMContentLoaded', function () {
-        // Clear conversation_id when loading the chat page
-        sessionStorage.removeItem('conversation_id');
-        fetch('/auth/get_credits')
-            .then(response => response.json())
-            .then(data => {
-                credits = data.credits;
-                document.getElementById('credits').textContent = credits;
-                if (credits > 0 && !timerEnded) {
-                    document.getElementById("startButton").disabled = false;
-                } else {
-                    disableStartButton();
-                }
-            });
+	document.addEventListener('DOMContentLoaded', function () {
+		// Clear conversation_id when loading the chat page
+		sessionStorage.removeItem('conversation_id');
+		fetch('/auth/get_credits')
+			.then(response => response.json())
+			.then(data => {
+				credits = data.credits;
+				document.getElementById('credits').textContent = credits;
+				if (credits > 0 && !timerEnded) {
+					document.getElementById("startButton").disabled = false;
+				} else {
+					disableStartButton();
+				}
+			});
 
-        // Ensure conversation ID is initialized or cleared when a new persona is selected
-        $.ajax({
-            url: "/clear_session",
-            type: "POST",
-            headers: {
-                "X-CSRFToken": csrfToken
-            },
-            success: function(response) {
-                console.log("Session cleared: ", response);
-                $.ajax({
-                    url: "/start_conversation/" + persona,
-                    type: "POST",
-                    data: JSON.stringify({ message: "" }), // Initial empty message to start the conversation
-                    contentType: "application/json",
-                    headers: {
-                        "X-CSRFToken": csrfToken
-                    },
-                    success: function(response) {
-                        if (response.conversation_id) {
-                            sessionStorage.setItem('conversation_id', response.conversation_id);
-                        } else {
-                            console.error("No conversation_id in response");
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error:", error);
-                    }
-                });
-            },
-            error: function(xhr, status, error) {
-                console.error("Error clearing session:", error);
-            }
-        });
-        // Add the following code to load the persona image
-        const personaName = new URLSearchParams(window.location.search).get('persona');
-        const personaImage = personaName.toLowerCase().replace(/\s+/g, '_') + ".jpg";
-        const imageUrl = `/static/${personaImage}`;
-        $('#persona-image').attr('src', imageUrl).on('error', function() {
-            $(this).attr('src', '/static/default_image.jpg'); // Fallback image
-        });
-    });
+		// Ensure conversation ID is initialized or cleared when a new persona is selected
+		$.ajax({
+			url: "/clear_session",
+			type: "POST",
+			headers: {
+				"X-CSRFToken": csrfToken
+			},
+			success: function(response) {
+				console.log("Session cleared: ", response);
+				$.ajax({
+					url: "/start_conversation/" + persona,
+					type: "POST",
+					data: JSON.stringify({ message: "" }), // Initial empty message to start the conversation
+					contentType: "application/json",
+					headers: {
+						"X-CSRFToken": csrfToken
+					},
+					success: function(response) {
+						if (response.conversation_id) {
+							sessionStorage.setItem('conversation_id', response.conversation_id);
+						} else {
+							console.error("No conversation_id in response");
+						}
+					},
+					error: function(xhr, status, error) {
+						console.error("Error:", error);
+					}
+				});
+			},
+			error: function(xhr, status, error) {
+				console.error("Error clearing session:", error);
+			}
+		});
 
+		// Add the following code to load the persona image
+		const personaName = new URLSearchParams(window.location.search).get('persona');
+		const personaImage = personaName.toLowerCase().replace(/\s+/g, '_') + ".jpg";
+		const imageUrl = `/static/${personaImage}`;
+		$('#persona-image').attr('src', imageUrl).on('error', function() {
+			$(this).attr('src', '/static/default_image.jpg'); // Fallback image
+		});
+	});
     // Clear session storage on back button
     window.addEventListener('popstate', function () {
         // Clear conversation_id when navigating back to persona list
         sessionStorage.removeItem('conversation_id');
     });
 
-    function startTimer(display) {
-        let duration = remainingTime; // Use the remaining time
-        let start = Date.now();
-        let diff, minutes, seconds;
-        let creditsDeducted = false;
+	function startTimer(display) {
+		let duration = remainingTime; // Use the remaining time
+		let start = Date.now();
+		let diff, minutes, seconds;
+		let creditsDeducted = false;
 
-        function timer() {
-            diff = duration - (((Date.now() - start) / 1000) | 0);
-            minutes = (diff / 60) | 0;
-            seconds = (diff % 60) | 0;
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-            display.textContent = minutes + ":" + seconds;
+		function timer() {
+			diff = duration - (((Date.now() - start) / 1000) | 0);
+			minutes = (diff / 60) | 0;
+			seconds = (diff % 60) | 0;
+			minutes = minutes < 10 ? "0" + minutes : minutes;
+			seconds = seconds < 10 ? "0" + seconds : seconds;
+			display.textContent = minutes + ":" + seconds;
 
-            if (!creditsDeducted && diff <= 0) {
-                console.log("Attempting to deduct credit...");
-                fetch('/auth/deduct_credit', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        "X-CSRFToken": csrfToken
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Credit deduction response:", data);
-                    credits = data.credits;
-                    document.getElementById('credits').textContent = credits;
-                    if (credits <= 0) {
-                        disableStartButton();
-                    }
-                })
-                .catch(error => console.error('Error deducting credit:', error));
-                creditsDeducted = true;
-            }
+			if (!creditsDeducted && diff <= 0) {
+				console.log("Attempting to deduct credit...");
+				fetch('/auth/deduct_credit', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						"X-CSRFToken": csrfToken
+					}
+				})
+				.then(response => response.json())
+				.then(data => {
+					console.log("Credit deduction response:", data);
+					credits = data.credits;
+					document.getElementById('credits').textContent = credits;
+					if (credits <= 0) {
+						disableStartButton();
+					}
+				})
+				.catch(error => console.error('Error deducting credit:', error));
+				creditsDeducted = true;
+			}
 
-            if (diff <= 0 || display.textContent === "00:00") {
-                clearInterval(timerInterval);
-                display.textContent = "00:00";
-                disableStartButton();
-                timerEnded = true; // Set timerEnded flag to true
+			if (diff <= 0 || display.textContent === "00:00") {
+				clearInterval(timerInterval);
+				display.textContent = "00:00";
+				disableStartButton();
+				timerEnded = true; // Set timerEnded flag to true
 
-                // Get the conversation_id from sessionStorage
-                var conversation_id = sessionStorage.getItem('conversation_id');
-                if (conversation_id) {
-                    closeConversation(conversation_id); // Close the conversation when time is up
-                }
-                alert('Time is up! Please re-select another persona to continue.');
-            }
-        }
+				// Get the conversation_id from sessionStorage
+				var conversation_id = sessionStorage.getItem('conversation_id');
+				if (conversation_id) {
+					closeConversation(conversation_id); // Close the conversation when time is up
+				}
+				alert('Time is up! Please re-select another persona to continue.');
+			}
+		}
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-            remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
-        }
+		function stopTimer() {
+			clearInterval(timerInterval);
+			remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
+		}
 
-        timerInterval = setInterval(timer, 1000);
+		timerInterval = setInterval(timer, 1000);
 
-        return stopTimer;
-    }
+		return stopTimer;
+	}
+
 
     var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const urlParams = new URLSearchParams(window.location.search);
@@ -710,138 +712,138 @@
         return closingStatements.some(statement => lowerTranscript.includes(statement));
     }
 
-    function startVoiceConversation() {
-        if (credits > 0 && !timerEnded) { // Check if the timer has not ended
-            let display = document.querySelector('#time');
-            if (!timerStarted) {
-                stopTimer = startTimer(display);
-                timerStarted = true;
-            } else {
-                clearInterval(timerInterval); // Clear the previous timer interval
-                stopTimer = startTimer(display); // Restart the timer with the remaining time
-            }
+	function startVoiceConversation() {
+		if (credits > 0 && !timerEnded) { // Check if the timer has not ended
+			let display = document.querySelector('#time');
+			if (!timerStarted) {
+				stopTimer = startTimer(display);
+				timerStarted = true;
+			} else {
+				clearInterval(timerInterval); // Clear the previous timer interval
+				stopTimer = startTimer(display); // Restart the timer with the remaining time
+			}
 
-            recognition = new webkitSpeechRecognition();
-            recognition.lang = 'hi-IN';
-            recognition.interimResults = false; // Only final results are needed
-            recognition.continuous = true; // Stop recognition on silence
+			recognition = new webkitSpeechRecognition();
+			recognition.lang = 'hi-IN';
+			recognition.interimResults = false; // Only final results are needed
+			recognition.continuous = true; // Stop recognition on silence
 
-            recognition.onresult = function(event) {
-                var transcript = event.results[0][0].transcript;
+			recognition.onresult = function(event) {
+				var transcript = event.results[0][0].transcript;
 
-                document.getElementById('chat-history').innerHTML += `
-                    <div class="message-wrapper">
-                        <div class="message-content agent-message">
-                            <p>${transcript}</p>
-                            <span class="message-timestamp">${getCurrentTimestamp()}</span>
-                        </div>
-                    </div>
-                `;
+				document.getElementById('chat-history').innerHTML += `
+					<div class="message-wrapper">
+						<div class="message-content agent-message">
+							<p>${transcript}</p>
+							<span class="message-timestamp">${getCurrentTimestamp()}</span>
+						</div>
+					</div>
+				`;
 
-                var chatHistory = document.getElementById('chat-history');
-                chatHistory.scrollTop = chatHistory.scrollHeight;
+				var chatHistory = document.getElementById('chat-history');
+				chatHistory.scrollTop = chatHistory.scrollHeight;
 
-                var conversation_id = sessionStorage.getItem('conversation_id');
-                
-                if (!conversation_id) {
-                    $.ajax({
-                        url: "/start_conversation/" + persona,
-                        type: "POST",
-                        data: JSON.stringify({ message: transcript }),
-                        contentType: "application/json",
-                        headers: {
-                            "X-CSRFToken": csrfToken
-                        },
-                        success: function(response) {
-                            if (response.conversation_id) {
-                                sessionStorage.setItem('conversation_id', response.conversation_id);
-                                handleUserMessage(transcript, response.conversation_id);
-                            } else {
-                                console.error("No conversation_id in response");
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error("Error:", error);
-                        }
-                    });
-                } else {
-                    handleUserMessage(transcript, conversation_id);
-                }
-            };
+				var conversation_id = sessionStorage.getItem('conversation_id');
 
-            recognition.onerror = function(event) {
-                console.error("Speech recognition error detected: " + event.error);
-            };
+				if (!conversation_id) {
+					$.ajax({
+						url: "/start_conversation/" + persona,
+						type: "POST",
+						data: JSON.stringify({ message: transcript }),
+						contentType: "application/json",
+						headers: {
+							"X-CSRFToken": csrfToken
+						},
+						success: function(response) {
+							if (response.conversation_id) {
+								sessionStorage.setItem('conversation_id', response.conversation_id);
+								handleUserMessage(transcript, response.conversation_id);
+							} else {
+								console.error("No conversation_id in response");
+							}
+						},
+						error: function(xhr, status, error) {
+							console.error("Error:", error);
+						}
+					});
+				} else {
+					handleUserMessage(transcript, conversation_id);
+				}
+			};
 
-            recognition.onspeechend = function() {
-                setTimeout(function() {
-                    recognition.stop();
-                }, 3000); // Allow a 3-second pause before stopping recognition
-            };
+			recognition.onerror = function(event) {
+				console.error("Speech recognition error detected: " + event.error);
+			};
 
-            recognition.onend = function() {
-                console.log("Speech recognition service disconnected");
-            };
+			recognition.onspeechend = function() {
+				setTimeout(function() {
+					recognition.stop();
+				}, 3000); // Allow a 2-second pause before stopping recognition
+			};
 
-            recognition.start();
-        }
-    }
+			recognition.onend = function() {
+				console.log("Speech recognition service disconnected");
+			};
 
-    function handleUserMessage(transcript, conversation_id) {
-        if (timerEnded) return; // Do nothing if the timer has ended
-        
-        addMessage('user', transcript, conversation_id);
+			recognition.start();
+		}
+	}
 
-        if (detectClosingStatement(transcript)) {
-            disableStartButton();
-            closeConversation(conversation_id);
-            stopTimer();
-            return;
-        }
+	function handleUserMessage(transcript, conversation_id) {
+		if (timerEnded) return; // Do nothing if the timer has ended
 
-        $.ajax({
-            url: "/start_conversation/" + persona,
-            type: "POST",
-            data: JSON.stringify({ message: transcript }),
-            contentType: "application/json",
-            headers: {
-                "X-CSRFToken": csrfToken
-            },
-            success: function(response) {
-                if (response.conversation_id) {
-                    sessionStorage.setItem('conversation_id', response.conversation_id);
-                }
-                console.log("System Response:", response.text);
-                if (response.audio) {
-                    playAudio(response.audio);
-                }
-                if (response.text) {
-                    document.getElementById('chat-history').innerHTML += `
-                        <div class="message-wrapper">
-                            <div class="message-content customer-message">
-                                <p>${response.text}</p>
-                                <span class="message-timestamp">${getCurrentTimestamp()}</span>
-                            </div>
-                            <div class="thumbs">
-                                <button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
-                                <button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
-                            </div>
-                        </div>
-                    `;
-                    addMessage('system', response.text, conversation_id);
+		addMessage('user', transcript, conversation_id);
 
-                    var chatHistory = document.getElementById('chat-history');
-                    chatHistory.scrollTop = chatHistory.scrollHeight;
-                    
-                    // Ensure the start button is disabled again
-                    disableStartButton();
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error("Error:", error);
-            }
-        });
-    }
+		if (detectClosingStatement(transcript)) {
+			disableStartButton();
+			closeConversation(conversation_id);
+			stopTimer();
+			return;
+		}
+
+		$.ajax({
+			url: "/start_conversation/" + persona,
+			type: "POST",
+			data: JSON.stringify({ message: transcript }),
+			contentType: "application/json",
+			headers: {
+				"X-CSRFToken": csrfToken
+			},
+			success: function(response) {
+				if (response.conversation_id) {
+					sessionStorage.setItem('conversation_id', response.conversation_id);
+				}
+				console.log("System Response:", response.text);
+				if (response.audio) {
+					playAudio(response.audio);
+				}
+				if (response.text) {
+					document.getElementById('chat-history').innerHTML += `
+						<div class="message-wrapper">
+							<div class="message-content customer-message">
+								<p>${response.text}</p>
+								<span class="message-timestamp">${getCurrentTimestamp()}</span>
+							</div>
+							<div class="thumbs">
+								<button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
+								<button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
+							</div>
+						</div>
+					`;
+					addMessage('system', response.text, conversation_id);
+
+					var chatHistory = document.getElementById('chat-history');
+					chatHistory.scrollTop = chatHistory.scrollHeight;
+
+					// Ensure the start button is disabled again
+					disableStartButton();
+				}
+			},
+			error: function(xhr, status, error) {
+				console.error("Error:", error);
+			}
+		});
+	}
 
     document.getElementById('chat-history').addEventListener('click', function(event) {
         if (event.target && event.target.matches('.show-english')) {
