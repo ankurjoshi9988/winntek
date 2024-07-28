@@ -10,12 +10,19 @@ from dotenv import load_dotenv
 from translate import Translator
 from googletrans import Translator
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import textwrap
 import logging
 
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+# Configure the root logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)  # Set to INFO or WARNING
+
+# Configure other specific loggers
+logging.getLogger('hpack').setLevel(logging.WARNING)  # Example: Set hpack logs to WARNING
+logging.getLogger('httpx').setLevel(logging.WARNING)  # Example: Set httpx logs to WARNING
+
 
 MAX_QUERY_LENGTH = 500
 
@@ -61,7 +68,6 @@ async def generate_feedback(conversation):
         sender = "Customer" if message.sender == 'system' else "Agent"
         formatted_conversation += f"{sender}: {message.content}\n"
 
-
     overall_prompt = (
         "Based on the following conversation between an insurance agent and a customer, provide feedback in Hindi language on the agent's performance. "
         "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation."
@@ -71,10 +77,12 @@ async def generate_feedback(conversation):
 
     overall_response = await llm_invoke(overall_prompt)
     overall_feedback = overall_response.content if overall_response else "Could not generate feedback at this time."
+
     # Process the feedback to limit it to 2 points per category
-    overall_feedback = process_feedback(overall_feedback)
-    translated_chunk_text = await translate_to_hindi(overall_feedback)
-    overall_feedback += translated_chunk_text + "\n"
+    overall_feedback_processed = process_feedback(overall_feedback)
+
+    # Translate the processed feedback to Hindi
+    translated_feedback = await translate_to_hindi(overall_feedback_processed)
 
     individual_feedback_list = []
     for message in conversation.messages:
@@ -83,7 +91,8 @@ async def generate_feedback(conversation):
                 "Provide feedback on the following response from the agent in simple Hindi language. "
                 "Indicate whether it was 'Positive' or 'Needs Improvement' only if necessary and provide specific comments on how it could be improved if needed. These indicators should be in English."
                 "Consider the overall chat conversation as context. Do not generate '***' in feedback text.\n\n"
-                f"Your response: {message.content}\n\nFeedback:"
+                f"Overall Conversation Context:\n{formatted_conversation}\n\n"
+                f"Agent's Response: {message.content}\n\nFeedback:"
             )
 
             individual_response = await llm_invoke(individual_prompt)
@@ -91,9 +100,11 @@ async def generate_feedback(conversation):
             translated_feedback_text = await translate_to_hindi(feedback_text)
             individual_feedback_list.append(f"आपका जवाब: {message.content}\nफ़ीडबैक: {translated_feedback_text}")
 
-    combined_feedback = f"कुल फ़ीडबैक:\n{overall_feedback}\n\nव्यक्तिगत फ़ीडबैक:\n" + "\n\n".join(individual_feedback_list)
+    combined_feedback = f"कुल फ़ीडबैक:\n{translated_feedback}\n\nव्यक्तिगत फ़ीडबैक:\n" + "\n\n".join(
+        individual_feedback_list)
 
     return combined_feedback
+
 
 def process_feedback(feedback):
     lines = feedback.split('\n')
@@ -118,6 +129,7 @@ def process_feedback(feedback):
     result.extend(improvements)
 
     return '\n'.join(result)
+
 
 async def llm_invoke(prompt):
     response = await asyncio.to_thread(llm.invoke, prompt)

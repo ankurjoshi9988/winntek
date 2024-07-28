@@ -100,9 +100,14 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
 
-#app = create_app()
-# Setup logging
-logging.basicConfig(level=logging.DEBUG)
+# Configure the root logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)  # Set to INFO or WARNING
+
+# Configure other specific loggers
+logging.getLogger('hpack').setLevel(logging.WARNING)  # Example: Set hpack logs to WARNING
+logging.getLogger('httpx').setLevel(logging.WARNING)  # Example: Set httpx logs to WARNING
+
 
 async def load_feedback_data(filename):
     feedback_data = []

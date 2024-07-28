@@ -2,13 +2,14 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_mail import Message
 from extensions import mail
 from flask_login import login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
+from sqlalchemy.exc import IntegrityError
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from extensions import db, login_manager, oauth  # Ensure these are correctly imported from your extensions module
-from models import User  # Assuming User model is defined in models.py or similar
+from extensions import db, login_manager, oauth
+from models import User
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -37,9 +38,8 @@ def init_auth(oauth_instance):
 
 @auth_bp.route('/login/google')
 def google_login():
-    redirect_uri = url_for('auth.google_authorize', _external=True, _scheme='https')
+    redirect_uri = url_for('auth.google_authorize', _external=True, _scheme='http')
     return oauth.google.authorize_redirect(redirect_uri)
-
 
 @auth_bp.route('/authorize/google')
 def google_authorize():
@@ -90,7 +90,6 @@ def google_authorize():
         flash("Authentication failed. Please try again.", 'error')
     return redirect(url_for('auth.login'))
 
-
 @auth_bp.route('/get_credits', methods=['GET'])
 @login_required
 def get_credits():
@@ -110,7 +109,6 @@ def deduct_credit():
     return jsonify({'credits': user.credits})
 
 
-
 class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     username = StringField('Username', validators=[DataRequired()])
@@ -121,35 +119,51 @@ class RegistrationForm(FlaskForm):
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
+    remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@auth_bp.route('/register', methods=['GET', 'POST'])
+@auth_bp.route('/auth/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
-        hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256')
-        new_user = User(email=form.email.data, username=form.username.data, password_hash=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for('auth.login'))
-    return render_template('register.html', form=form)
+        email = form.email.data
+        username = form.username.data
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
+        # Check if the email already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Email address already registered', 'danger')
+            return render_template('auth.html', form=form, tab='register')
+
+        new_user = User(email=email, username=username)
+        new_user.set_password(form.password.data)
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful', 'success')
+            return redirect(url_for('auth.login'))
+        except IntegrityError:
+            db.session.rollback()
+            flash('An error occurred during registration. Please try again.', 'danger')
+            return render_template('auth.html', form=form, tab='register')
+
+    return render_template('auth.html', form=form, tab='register')
+
+@auth_bp.route('/auth/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+    next_page = request.args.get('next')
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
-        if user and check_password_hash(user.password_hash, form.password.data):
-            login_user(user)
-            next_page = request.args.get('next')
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember.data)
             return redirect(next_page or url_for('index'))
-        else:
-            flash('Invalid username or password')
-    return render_template('auth.html', form=form)
+        flash('Invalid username or password', 'danger')
+    return render_template('auth.html', form=form, tab='login')
 
 @auth_bp.route('/logout')
 @login_required
@@ -157,9 +171,7 @@ def logout():
     logout_user()
     return redirect(url_for('auth.login'))
 
-# This is an example assuming your OAuth flow redirects here with the token
-
-@auth_bp.route('/reset_password', methods=['GET', 'POST'])
+@auth_bp.route('/auth/reset_password_request', methods=['GET', 'POST'])
 def reset_password_request():
     if request.method == 'POST':
         email = request.form['email']
@@ -168,28 +180,9 @@ def reset_password_request():
             send_reset_email(user)
         flash('Check your email for the instructions to reset your password', 'info')
         return redirect(url_for('auth.login'))
-    return render_template('reset_password_request.html')
+    return render_template('auth.html', tab='reset')
 
-def send_reset_email(user):
-    try:
-        token = URLSafeTimedSerializer(current_app.config['SECRET_KEY']).dumps(user.email, salt='reset-password')
-        subject = 'Password Reset Request'
-        body = f'''To reset your password, visit the following link:
-{url_for('auth.reset_password', token=token, _external=True)}
-
-If you did not make this request then simply ignore this email and no changes will be made.'''
-        msg = Message(subject, recipients=[user.email], body=body)
-        mail.send(msg)
-        logging.info(f"Password reset email sent to {user.email}")
-    except Exception as e:
-        logging.error(f"Failed to send password reset email: {e}")
-
-def generate_reset_token(email):
-    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    return serializer.dumps(email, salt='reset-password-salt')
-
-
-@auth_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+@auth_bp.route('/auth/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     try:
         email = URLSafeTimedSerializer(current_app.config['SECRET_KEY']).loads(token, salt='reset-password', max_age=3600)
@@ -213,137 +206,16 @@ def reset_password(token):
             return redirect(url_for('auth.reset_password', token=token))
     return render_template('reset_password.html', token=token)
 
-
-def confirm_reset_token(token, expiration=3600):
-    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    return serializer.loads(token, salt='reset-password-salt', max_age=expiration)
-
-
-
-def get_valid_token():
-    logging.info("Checking for valid token...")
-    if 'token' in session and 'expires_at' in session['token'] and 'access_token' in session['token']:
-        logging.info(f"Token found in session: {session['token']}")
-        if session['token']['expires_at'] > time.time():
-            logging.info("Token is still valid.")
-            return session['token']['access_token']
-        else:
-            logging.info("Token has expired. Attempting to refresh...")
-    else:
-        logging.info("No valid token available. Need to log in again.")
-        return None
-
-    refreshed_token = refresh_token_if_needed()
-    if not refreshed_token:
-        logging.error("Failed to refresh token or no refresh token available.")
-        return None
-
-    session['token'] = {
-        'access_token': refreshed_token['access_token'],
-        'refresh_token': refreshed_token.get('refresh_token', session['token'].get('refresh_token')),
-        'expires_at': int(time.time()) + refreshed_token['expires_in']
-    }
-    session.modified = True
-    logging.info(f"Token refreshed and stored in session: {session['token']}")
-    return session['token']['access_token']
-
-
-def refresh_token_if_needed():
-    logging.info("Checking if token refresh is needed...")
-    if 'token' in session and 'refresh_token' in session['token']:
-        if session['token'].get('expires_at', 0) < time.time():
-            logging.info("Token has expired. Attempting to refresh...")
-            try:
-                new_token = oauth.google.refresh_token(refresh_token=session['token']['refresh_token'])
-                session['token'] = {
-                    'access_token': new_token['access_token'],
-                    'refresh_token': new_token.get('refresh_token', session['token']['refresh_token']),
-                    'expires_at': int(time.time()) + new_token['expires_in']
-                }
-                session.modified = True
-                logging.info(f"Token refreshed: {session['token']}")
-                return new_token['access_token']
-            except Exception as e:
-                logging.error(f"Failed to refresh token: {e}")
-                return None
-    logging.info("No token refresh needed or available.")
-    return session.get('token', {}).get('access_token')
-
-
-def refresh_token(refresh_token):
+def send_reset_email(user):
     try:
-        logging.info("Attempting to refresh token...")
-        new_token_response = oauth.google.refresh_token(refresh_token=refresh_token)
-        logging.info(f"Token refreshed successfully: {new_token_response}")
-        return {
-            'access_token': new_token_response['access_token'],
-            'expires_in': new_token_response['expires_in'],
-            'refresh_token': new_token_response.get('refresh_token', refresh_token)
-        }
+        token = URLSafeTimedSerializer(current_app.config['SECRET_KEY']).dumps(user.email, salt='reset-password')
+        subject = 'Password Reset Request'
+        body = f'''To reset your password, visit the following link:
+{url_for('auth.reset_password', token=token, _external=True)}
+
+If you did not make this request then simply ignore this email and no changes will be made.'''
+        msg = Message(subject, recipients=[user.email], body=body)
+        mail.send(msg)
+        logging.info(f"Password reset email sent to {user.email}")
     except Exception as e:
-        logging.error(f"Failed to refresh token: {e}")
-        return None
-
-
-def send_gmail_api_email(to, subject, body):
-    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-
-    creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
-    service = build('gmail', 'v1', credentials=creds)
-    message = {
-        'raw': base64.urlsafe_b64encode(
-            f'To: {to}\nSubject: {subject}\n\n{body}'.encode('utf-8')
-        ).decode('utf-8')
-    }
-
-    try:
-        message = service.users().messages().send(userId='me', body=message).execute()
-        logging.info(f"Message sent: {message['id']}")
-    except Exception as e:
-        logging.error(f"An error occurred: {e}")
-        flash('Failed to send password reset email. Please try again later.', 'error')
-
-# Update the reset password function to use the new email function
-
-def send_email(user, subject, body):
-    """Send an email using the Gmail API."""
-    try:
-        access_token = get_valid_token()
-        if not access_token:
-            logging.error("No valid token available for sending email")
-            return 'No valid token available'
-
-        credentials = Credentials(
-            token=access_token,
-            refresh_token=session['token'].get('refresh_token', None),
-            token_uri='https://oauth2.googleapis.com/token',
-            client_id=os.getenv('GOOGLE_CLIENT_ID'),
-            client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
-            scopes=['https://www.googleapis.com/auth/gmail.send']
-        )
-        service = build('gmail', 'v1', credentials=credentials)
-        email_msg = f"From: {user.email}\r\nTo: {user.email}\r\nSubject: {subject}\r\n\r\n{body}"
-        encoded_message = base64.urlsafe_b64encode(email_msg.encode()).decode()
-        message = {'raw': encoded_message}
-        sent_message = service.users().messages().send(userId="me", body=message).execute()
-        logging.info(f'Message Id: {sent_message["id"]}')
-        return 'Email sent successfully'
-    except KeyError as ke:
-        logging.error(f"A KeyError occurred: {ke}")
-        return 'Failed to send email due to missing key'
-    except Exception as e:
-        logging.error('An error occurred:', e)
-        return 'Failed to send email'
+        logging.error(f"Failed to send password reset email: {e}")

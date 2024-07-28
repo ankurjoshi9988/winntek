@@ -12,37 +12,55 @@
 <div class="container mt-5">
     <ul class="nav nav-tabs" id="authTab" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">Login</button>
+            <button class="nav-link {% if tab == 'login' %}active{% endif %}" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">Login</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">Register</button>
+            <button class="nav-link {% if tab == 'register' %}active{% endif %}" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">Register</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset" type="button" role="tab">Reset Password</button>
+            <button class="nav-link {% if tab == 'reset' %}active{% endif %}" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset" type="button" role="tab">Reset Password</button>
         </li>
     </ul>
     <div class="tab-content" id="authTabContent">
-        <!-- Login Form -->
-        <div class="tab-pane fade show active" id="login" role="tabpanel">
-            <form action="/auth/login" method="post">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <!-- Ensure this line is correctly rendering the CSRF token -->
-				<div class="mb-3">
-					<label for="username" class="form-label">Username</label>
-					<input type="text" class="form-control" id="username" name="username" required>
-				</div>
-				<div class="mb-3">
-					<label for="password" class="form-label">Password</label>
-					<input type="password" class="form-control" id="password" name="password" required>
-				</div>
-				<button type="submit" class="btn btn-primary">Login</button>
-				<a href="/auth/login/google" class="btn btn-danger">Login with Google</a>
-			</form>
-
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="alert alert-dismissible mt-3">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
         </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Login Form -->
+        <div class="tab-pane fade {% if tab == 'login' %}show active{% endif %}" id="login" role="tabpanel">
+            <form action="{{ url_for('auth.login') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">Remember Me</label>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+                <a href="{{ url_for('auth.google_login') }}" class="btn btn-danger">Login with Google</a>
+            </form>
+        </div>
+
         <!-- Registration Form -->
-        <div class="tab-pane fade" id="register" role="tabpanel">
-            <form action="/auth/register" method="post">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <!-- Ensure this line is correctly rendering the CSRF token -->
+        <div class="tab-pane fade {% if tab == 'register' %}show active{% endif %}" id="register" role="tabpanel">
+            <form action="{{ url_for('auth.register') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
                     <input type="email" class="form-control" id="email" name="email" required>
@@ -62,10 +80,11 @@
                 <button type="submit" class="btn btn-primary">Register</button>
             </form>
         </div>
+
         <!-- Reset Password Request Form -->
-        <div class="tab-pane fade" id="reset" role="tabpanel">
-            <form action="/auth/reset_password" method="post">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <!-- Ensure this line is correctly rendering the CSRF token -->
+        <div class="tab-pane fade {% if tab == 'reset' %}show active{% endif %}" id="reset" role="tabpanel">
+            <form action="{{ url_for('auth.reset_password_request') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <label for="reset-email" class="form-label">Email</label>
                     <input type="email" class="form-control" id="reset-email" name="email" required>
