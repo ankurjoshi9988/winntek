@@ -11,6 +11,11 @@ from translate import Translator
 from googletrans import Translator
 import asyncio
 import textwrap
+import logging
+
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 
 MAX_QUERY_LENGTH = 500
 
@@ -119,13 +124,15 @@ async def llm_invoke(prompt):
     return response
 
 
-async def close_conversation(conversation_id):
+async def close_conversation(app, conversation_id):
     conversation = Conversation.query.get(conversation_id)
     if not conversation:
+        app.logger.error("No conversation found with the given ID: %s", conversation_id)
         return "No conversation found with the given ID."
 
     existing_feedback = Feedback.query.filter_by(conversation_id=conversation_id).first()
     if existing_feedback:
+        app.logger.debug("Returning existing feedback for conversation_id: %s", conversation_id)
         return existing_feedback.content  # Return the existing feedback if it exists
 
     try:
@@ -133,8 +140,10 @@ async def close_conversation(conversation_id):
         feedback = Feedback(conversation_id=conversation_id, content=feedback_content)
         db.session.add(feedback)
         db.session.commit()
+        app.logger.debug("Feedback generated and saved for conversation_id: %s", conversation_id)
         return feedback_content
     except Exception as e:
+        app.logger.error(f"An error occurred while closing the conversation {conversation_id}: {e}")
         db.session.rollback()
         return f"An error occurred while closing the conversation: {str(e)}"
 

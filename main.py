@@ -102,7 +102,7 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 
 #app = create_app()
 # Setup logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 async def load_feedback_data(filename):
     feedback_data = []
@@ -358,15 +358,21 @@ def add_message_route():
 @login_required
 def close_conversation_route():
     data = request.json
-    conversation_id = data['conversation_id']
+    conversation_id = data.get('conversation_id')
     if not conversation_id:
+        app.logger.error("conversation_id is required")
         return jsonify({'error': 'conversation_id is required'}), 400
 
-    feedback = asyncio.run(close_conversation(conversation_id))
-    if feedback is None:
-        return jsonify({'error': 'Failed to retrieve feedback'}), 500
+    try:
+        feedback = asyncio.run(close_conversation(app, conversation_id))
+        if feedback is None:
+            app.logger.error("Failed to retrieve feedback for conversation_id: %s", conversation_id)
+            return jsonify({'error': 'Failed to retrieve feedback'}), 500
+        return jsonify({'status': 'conversation closed', 'feedback': feedback}), 200
+    except Exception as e:
+        app.logger.error(f"Error in close_conversation_route for conversation_id {conversation_id}: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
-    return jsonify({'status': 'conversation closed', 'feedback': feedback}), 200
 
 
 @app.route('/clear_session', methods=['POST'])
