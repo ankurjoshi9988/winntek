@@ -100,9 +100,14 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
 
-# Configure the root logger
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)  # Set to INFO or WARNING
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("app_debug.log"),
+        logging.StreamHandler()
+    ]
+)
 
 # Configure other specific loggers
 logging.getLogger('hpack').setLevel(logging.WARNING)  # Example: Set hpack logs to WARNING

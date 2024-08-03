@@ -13,15 +13,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import textwrap
 import logging
-
-
-# Configure the root logger
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)  # Set to INFO or WARNING
-
-# Configure other specific loggers
-logging.getLogger('hpack').setLevel(logging.WARNING)  # Example: Set hpack logs to WARNING
-logging.getLogger('httpx').setLevel(logging.WARNING)  # Example: Set httpx logs to WARNING
+import psutil
 
 
 MAX_QUERY_LENGTH = 500
@@ -63,10 +55,7 @@ async def generate_feedback(conversation):
     if not conversation or not conversation.messages:
         return "Feedback could not be generated due to missing conversation details."
 
-    formatted_conversation = ""
-    for message in conversation.messages:
-        sender = "Customer" if message.sender == 'system' else "Agent"
-        formatted_conversation += f"{sender}: {message.content}\n"
+    formatted_conversation = "\n".join([f"{'Customer' if msg.sender == 'system' else 'Agent'}: {msg.content}" for msg in conversation.messages])
 
     overall_prompt = (
         "Based on the following conversation between an insurance agent and a customer, provide feedback in Hindi language on the agent's performance. "
@@ -75,14 +64,23 @@ async def generate_feedback(conversation):
         f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
     )
 
+    log_system_usage("Before overall feedback generation")
+
     overall_response = await llm_invoke(overall_prompt)
     overall_feedback = overall_response.content if overall_response else "Could not generate feedback at this time."
 
-    # Process the feedback to limit it to 2 points per category
-    overall_feedback_processed = process_feedback(overall_feedback)
+    log_system_usage("After overall feedback generation")
 
-    # Translate the processed feedback to Hindi
-    translated_feedback = await translate_to_hindi(overall_feedback_processed)
+    # Process the feedback to limit it to 2 points per category
+    processed_feedback = process_feedback(overall_feedback)
+
+    log_system_usage("After processing overall feedback")
+
+    # Translate the overall feedback to Hindi and append to result
+    translated_chunk_text = await translate_to_hindi(processed_feedback)
+    final_feedback = translated_chunk_text + "\n"
+
+    log_system_usage("After translating overall feedback")
 
     individual_feedback_list = []
     for message in conversation.messages:
@@ -91,8 +89,7 @@ async def generate_feedback(conversation):
                 "Provide feedback on the following response from the agent in simple Hindi language. "
                 "Indicate whether it was 'Positive' or 'Needs Improvement' only if necessary and provide specific comments on how it could be improved if needed. These indicators should be in English."
                 "Consider the overall chat conversation as context. Do not generate '***' in feedback text.\n\n"
-                f"Overall Conversation Context:\n{formatted_conversation}\n\n"
-                f"Agent's Response: {message.content}\n\nFeedback:"
+                f"Your response: {message.content}\n\nFeedback:"
             )
 
             individual_response = await llm_invoke(individual_prompt)
@@ -100,11 +97,17 @@ async def generate_feedback(conversation):
             translated_feedback_text = await translate_to_hindi(feedback_text)
             individual_feedback_list.append(f"आपका जवाब: {message.content}\nफ़ीडबैक: {translated_feedback_text}")
 
-    combined_feedback = f"कुल फ़ीडबैक:\n{translated_feedback}\n\nव्यक्तिगत फ़ीडबैक:\n" + "\n\n".join(
-        individual_feedback_list)
+    combined_feedback = f"कुल फ़ीडबैक:\n{final_feedback}\n\nव्यक्तिगत फ़ीडबैक:\n" + "\n\n".join(individual_feedback_list)
+
+    log_system_usage("After generating combined feedback")
 
     return combined_feedback
 
+def log_system_usage(context=""):
+    process = psutil.Process()
+    memory_info = process.memory_info()
+    cpu_usage = process.cpu_percent(interval=1)
+    logging.debug(f"{context} - Memory Usage: RSS={memory_info.rss / 1024 ** 2:.2f} MB, VMS={memory_info.vms / 1024 ** 2:.2f} MB, CPU Usage={cpu_usage:.2f}%")
 
 def process_feedback(feedback):
     lines = feedback.split('\n')
