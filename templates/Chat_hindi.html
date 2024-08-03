@@ -7,6 +7,23 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
+		.tone-selector {
+			margin-top: 10px;
+			text-align: center;
+		}
+
+		.tone-selector label {
+			font-weight: bold;
+			margin-right: 5px;
+		}
+
+		.tone-selector select {
+			padding: 5px;
+			border-radius: 5px;
+			border: 1px solid #ccc;
+			background-color: #f9f9f9;
+		}
+
         .agent-message {
             background-color: #e1f5fe; /* Light blue */
             border-left: 5px solid #0288d1; /* Darker blue */
@@ -526,6 +543,20 @@
             <div class="audio-wave" id="audio-wave">
                 <img src="/static/audio-wave-placeholder.gif" alt="Audio Wave Animation" id="audio-wave-placeholder">
             </div>
+			<!-- Tone selector -->
+			<div class="tone-selector">				
+				<select id="tone-selector">
+					<option value="">Select Tone:</option>
+					<option value="polite">Polite</option>
+					<option value="rude">Rude</option>
+					<option value="angry">Angry</option>
+					<option value="friendly">Friendly</option>
+					<option value="formal">Formal</option>
+					<option value="casual">Casual</option>
+					<option value="enthusiastic">Enthusiastic</option>
+					<option value="calm">Calm</option>
+				</select>
+			</div>
         </div>
         <div class="chat-history" id="chat-history"></div>        
         <div class="button-container">                
@@ -711,10 +742,30 @@
         const lowerTranscript = transcript.toLowerCase();
         return closingStatements.some(statement => lowerTranscript.includes(statement));
     }
+	
+	document.getElementById('tone-selector').addEventListener('change', function() {
+		var selectedTone = this.value;
+		$.ajax({
+			url: "/set_tone",
+			type: "POST",
+			contentType: "application/json",
+			data: JSON.stringify({ tone: selectedTone }),
+			headers: {
+				"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+			},
+			success: function(response) {
+				console.log("Tone set successfully:", response);
+			},
+			error: function(xhr, status, error) {
+				console.error("Error setting tone:", error);
+			}
+		});
+	});
 
 	function startVoiceConversation() {
 		if (credits > 0 && !timerEnded) { // Check if the timer has not ended
 			let display = document.querySelector('#time');
+			var selectedTone = document.getElementById('tone-selector').value; // Get selected tone
 			if (!timerStarted) {
 				stopTimer = startTimer(display);
 				timerStarted = true;
@@ -722,6 +773,9 @@
 				clearInterval(timerInterval); // Clear the previous timer interval
 				stopTimer = startTimer(display); // Restart the timer with the remaining time
 			}
+
+			// Disable the tone selector
+			document.getElementById('tone-selector').disabled = true;
 
 			recognition = new webkitSpeechRecognition();
 			recognition.lang = 'hi-IN';
@@ -749,7 +803,7 @@
 					$.ajax({
 						url: "/start_conversation/" + persona,
 						type: "POST",
-						data: JSON.stringify({ message: transcript }),
+						data: JSON.stringify({ message: transcript, tone: selectedTone }), // Send tone with the message
 						contentType: "application/json",
 						headers: {
 							"X-CSRFToken": csrfToken
@@ -757,7 +811,7 @@
 						success: function(response) {
 							if (response.conversation_id) {
 								sessionStorage.setItem('conversation_id', response.conversation_id);
-								handleUserMessage(transcript, response.conversation_id);
+								handleUserMessage(transcript, response.conversation_id, selectedTone); // Pass tone
 							} else {
 								console.error("No conversation_id in response");
 							}
@@ -767,7 +821,7 @@
 						}
 					});
 				} else {
-					handleUserMessage(transcript, conversation_id);
+					handleUserMessage(transcript, conversation_id, selectedTone); // Pass tone
 				}
 			};
 
@@ -789,7 +843,7 @@
 		}
 	}
 
-	function handleUserMessage(transcript, conversation_id) {
+	function handleUserMessage(transcript, conversation_id, tone) {
 		if (timerEnded) return; // Do nothing if the timer has ended
 
 		addMessage('user', transcript, conversation_id);
@@ -804,7 +858,7 @@
 		$.ajax({
 			url: "/start_conversation/" + persona,
 			type: "POST",
-			data: JSON.stringify({ message: transcript }),
+			data: JSON.stringify({ message: transcript, tone: tone }), // Send tone with the message
 			contentType: "application/json",
 			headers: {
 				"X-CSRFToken": csrfToken
@@ -844,6 +898,8 @@
 			}
 		});
 	}
+
+
 
     document.getElementById('chat-history').addEventListener('click', function(event) {
         if (event.target && event.target.matches('.show-english')) {
@@ -1164,10 +1220,6 @@ function showConversation(convo) {
 
     pastConversationsModal.style.display = 'block';
 }
-
-
-
-
 
 
 

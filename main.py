@@ -305,6 +305,7 @@ async def start_conversation1(persona):
     print(f"New conversation_id: {conversation_id}")
 
     agent_message = request.json.get('message')
+    tone = session.get('tone', 'polite')  # Default tone is polite if not set
     audio_file_name = str(uuid.uuid4()) + ".mp3"
 
     message2 = [
@@ -316,6 +317,7 @@ async def start_conversation1(persona):
                 - ACT AS A POTENTIAL CUSTOMER.
                 - FOCUS ON YOUR ROLE AS THE CUSTOMER AND MAINTAIN A CONSISTENT PERSONA THROUGHOUT THE CONVERSATION.
                 - YOUR PROFILE: "{persona}" AND "{persona_data[persona]}".
+                - YOUR TONE: "{tone.upper()}".
                 - ANSWER ONLY TO WHAT HAS BEEN ASKED RELATED TO CONTEXT.
                 - YOU KNOW HINDI AND ENGLISH LANGUAGE VERY WELL. YOU HAVE A CONVERSATION IN HINDI.
                 - REMEMBER, TAKE A DEEP BREATH AND THINK TWICE BEFORE RESPONDING.
@@ -342,6 +344,14 @@ async def start_conversation1(persona):
         "conversation_id": conversation_id
     })
 
+
+@app.route('/set_tone', methods=['POST'])
+@login_required
+def set_tone():
+    tone = request.json.get('tone', 'polite')  # Default to polite if tone not provided
+    session['tone'] = tone
+    session.modified = True
+    return jsonify({"status": "Tone set successfully"})
 
 @app.route('/add_message', methods=['POST'])
 @login_required
