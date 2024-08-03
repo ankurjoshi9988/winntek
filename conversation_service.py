@@ -51,13 +51,51 @@ def add_message(conversation_id, sender, content):
     db.session.add(message)
     db.session.commit()
 
+async def generate_overall_feedback(conversation):
+    formatted_conversation = "\n".join([f"{'Customer' if msg.sender == 'system' else 'Agent'}: {msg.content}" for msg in conversation.messages])
+
+    overall_prompt = (
+        "Based on the following conversation between an insurance agent and a customer, provide feedback in Hindi language on the agent's performance. "
+        "The feedback should be categorized as either 'Positives' or 'Needs Improvement' only if necessary and include specific comments on how the agent handled the conversation."
+        "Consider the overall chat conversation as context. The feedback should reflect how the conversation started, how the agent responded to queries, and how the conversation ended. Do not generate or write '***' in feedback text.\n\n"
+        f"Conversation:\n{formatted_conversation}\n\nOverall Feedback:"
+    )
+
+    log_system_usage("Before overall feedback generation")
+
+    overall_response = await llm_invoke(overall_prompt)
+    overall_feedback = overall_response.content if overall_response else "Could not generate feedback at this time."
+
+    log_system_usage("After overall feedback generation")
+
+    # Process the feedback to limit it to 2 points per category
+    processed_feedback = process_feedback(overall_feedback)
+
+    log_system_usage("After processing overall feedback")
+
+    # Translate the overall feedback to Hindi and append to result
+    translated_chunk_text = await translate_to_hindi(processed_feedback)
+    final_feedback = translated_chunk_text + "\n"
+
+    log_system_usage("After translating overall feedback")
+
+    return final_feedback
+
 
 async def generate_feedback(conversation):
     if not conversation or not conversation.messages:
         return "Feedback could not be generated due to missing conversation details."
 
+    # Generate overall feedback
+    overall_feedback = await generate_overall_feedback(conversation)
+
+    # If overall feedback is not generated, provide a placeholder
+    if not overall_feedback:
+        overall_feedback = "No overall feedback available."
+
     log_system_usage("Before individual feedback generation")
 
+    # Generate individual feedback
     individual_feedback_list = []
     for message in conversation.messages:
         if message.sender == 'user':
@@ -75,7 +113,9 @@ async def generate_feedback(conversation):
 
     log_system_usage("After individual feedback generation")
 
-    combined_feedback = "व्यक्तिगत फ़ीडबैक:\n" + "\n\n".join(individual_feedback_list)
+    # Combine feedback
+    combined_feedback = f"कुल फ़ीडबैक:\n{overall_feedback}\n\nव्यक्तिगत फ़ीडबैक:\n" + "\n\n".join(
+        individual_feedback_list)
 
     log_system_usage("After generating combined feedback")
 
