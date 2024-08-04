@@ -17,6 +17,7 @@ from knowledge import knowledge_bp
 import logging
 import site
 print(site.getsitepackages())
+import azure.cognitiveservices.speech as speechsdk
 
 from fuzzywuzzy import fuzz
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -39,11 +40,17 @@ load_dotenv()
 
 api_key=os.environ['GOOGLE_API_KEY']
 genai.configure(api_key=api_key)
+azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
+azure_region = os.getenv("AZURE_REGION")
 llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
 #llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True)
 #env = os.getenv('FLASK_ENV', 'development')
 executor = ThreadPoolExecutor()
-
+# Define voice mappings for male and female personas
+VOICE_MAPPING = {
+    "Male": "hi-IN-MadhurNeural",
+    "Female": "hi-IN-SwaraNeural"
+}
 
 app = Flask(__name__)
 #env = os.getenv('FLASK_ENV', 'development')
@@ -307,6 +314,16 @@ async def start_conversation1(persona):
     agent_message = request.json.get('message')
     tone = session.get('tone', 'polite')  # Default tone is polite if not set
     audio_file_name = str(uuid.uuid4()) + ".mp3"
+    # Determine the gender of the persona
+    persona_gender = persona_data[persona]["Gender"]
+    print("persona_gender", persona_gender)  # Debugging information
+
+    # Select the voice based on persona's gender
+    selected_voice = VOICE_MAPPING.get(persona_gender)
+    if not selected_voice:
+        selected_voice = "hi-IN-SwaraNeural"  # Default to female voice if no match found
+
+    print("selected_voice", selected_voice)  # Debugging information
 
     message2 = [
         SystemMessage(
@@ -335,8 +352,25 @@ async def start_conversation1(persona):
     customer_message = response.content
     print("Mahesh: ", customer_message)
 
-    tts = gTTS(text=customer_message, lang='hi')
-    await asyncio.to_thread(tts.save, f"static/{audio_file_name}")
+
+
+    # Azure Text-to-Speech implementation
+    speech_config = speechsdk.SpeechConfig(subscription=azure_subscription_key, region=azure_region)
+    speech_config.speech_synthesis_voice_name = selected_voice
+
+    audio_config = speechsdk.audio.AudioOutputConfig(filename=f"static/{audio_file_name}")
+    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+
+    # Perform TTS in a separate thread and get the result
+    result = await asyncio.to_thread(speech_synthesizer.speak_text_async(customer_message).get)
+    # Check result
+    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+        print(f"Speech synthesized for text [{customer_message}]")
+    elif result.reason == speechsdk.ResultReason.Canceled:
+        cancellation_details = result.cancellation_details
+        print(f"Speech synthesis canceled: {cancellation_details.reason}")
+        if cancellation_details.reason == speechsdk.CancellationReason.Error:
+            print(f"Error details: {cancellation_details.error_details}")
 
     return jsonify({
         "text": customer_message,
