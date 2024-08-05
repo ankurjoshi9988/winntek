@@ -7,22 +7,51 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-		.tone-selector {
-			margin-top: 10px;
-			text-align: center;
-		}
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f1f1f1;
+        }
 
-		.tone-selector label {
-			font-weight: bold;
-			margin-right: 5px;
-		}
+        .top-bar .back-button,
+        .top-bar .hamburger {
+            cursor: pointer;
+        }
 
-		.tone-selector select {
-			padding: 5px;
-			border-radius: 5px;
-			border: 1px solid #ccc;
-			background-color: #f9f9f9;
-		}
+        .top-bar .hamburger div {
+            width: 25px;
+            height: 3px;
+            background-color: #333;
+            margin: 5px 0;
+        }
+
+        .timer-credits {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .tone-selector {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .tone-selector label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tone-selector select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
 
         .agent-message {
             background-color: #e1f5fe; /* Light blue */
@@ -39,111 +68,119 @@
             margin-bottom: 10px;
             border-radius: 5px;
         }
-
-		.feedback-section {
-			border: 1px solid;
-			margin-bottom: 10px;
+		#feedback-container {
+			margin-bottom: 60px; /* Adjust the value as needed */
 			padding: 10px;
-			border-radius: 5px;
-			font-size: 14px;
-			line-height: 1.5;
+			background-color: #f9f9f9;
+			border-radius: 10px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+			max-height: 35vh; /* Adjust the max-height to fit the screen better */
+			overflow-y: auto; /* Enable vertical scrolling */
+			text-align: center; /* Center-align the content */
 		}
 
-		.feedback-overall {
-			color: #28a745;
-			border-color: #28a745;
-			background-color: #d4edda;
-		}
+        .feedback-section {
+            border: 1px solid;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
 
-		.feedback-individual {
-			color: #d32f2f;
-			border-color: #d32f2f;
-			background-color: #f8d7da;
-		}
+        .feedback-overall {
+            color: #28a745;
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
 
-		.feedback-overall h3, .feedback-individual h3 {
-			margin-top: 0;
-			margin-bottom: 5px;
-		}
+        .feedback-individual {
+            color: #d32f2f;
+            border-color: #d32f2f;
+            background-color: #f8d7da;
+        }
 
-		.feedback-overall p, .feedback-individual p {
-			font-weight: normal;
-			margin-bottom: 5px;
-			white-space: pre-wrap;
-		}
+        .feedback-overall h3, .feedback-individual h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
 
-		.modal {
-			display: none; /* Hidden by default */
-			position: fixed; /* Stay in place */
-			z-index: 1; /* Sit on top */
-			left: 0;
-			top: 0;
-			width: 100%;
-			height: 100%;
-			overflow: auto; /* Enable scroll if needed */
-			background-color: rgb(0,0,0); /* Fallback color */
-			background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-		}
+        .feedback-overall p, .feedback-individual p {
+            font-weight: normal;
+            margin-bottom: 5px;
+            white-space: pre-wrap;
+        }
 
-		.modal-content {
-			background-color: #fefefe;
-			margin: 5% auto; /* Center vertically and horizontally */
-			padding: 20px;
-			border: 1px solid #888;
-			width: 90%; /* Could be more or less, depending on screen size */
-			max-width: 800px; /* Limit maximum width */
-			overflow: hidden;
-		}
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
 
-		.close-button {
-			color: #aaa;
-			float: right;
-			font-size: 28px;
-			font-weight: bold;
-		}
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; /* Center vertically and horizontally */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%; /* Could be more or less, depending on screen size */
+            max-width: 800px; /* Limit maximum width */
+            overflow: hidden;
+        }
 
-		.close-button:hover,
-		.close-button:focus {
-			color: black;
-			text-decoration: none;
-			cursor: pointer;
-		}
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
 
-		.nav-drawer {
-			height: 100%;
-			width: 0;
-			position: fixed;
-			z-index: 1;
-			top: 0;
-			left: 0;
-			background-color: #111;
-			overflow-x: hidden;
-			transition: 0.5s;
-			padding-top: 60px;
-		}
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
 
-		.nav-drawer a {
-			padding: 8px 8px 8px 16px; /* Adjust padding to reduce white space */
-			text-decoration: none;
-			font-size: 25px;
-			color: #818181;
-			display: block;
-			transition: 0.3s;
-		}
+        .nav-drawer {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            background-color: #111;
+            overflow-x: hidden;
+            transition: 0.5s;
+            padding-top: 60px;
+        }
 
-		.nav-drawer a:hover {
-			color: #f1f1f1;
-		}
+        .nav-drawer a {
+            padding: 8px 8px 8px 16px; /* Adjust padding to reduce white space */
+            text-decoration: none;
+            font-size: 25px;
+            color: #818181;
+            display: block;
+            transition: 0.3s;
+        }
 
-		.nav-drawer .closebtn {
-			position: absolute;
-			top: 0;
-			right: 25px;
-			font-size: 36px;
-			margin-left: 50px;
-		}
+        .nav-drawer a:hover {
+            color: #f1f1f1;
+        }
 
-
+        .nav-drawer .closebtn {
+            position: absolute;
+            top: 0;
+            right: 25px;
+            font-size: 36px;
+            margin-left: 50px;
+        }
 
         .persona-details {
             display: flex;
@@ -159,206 +196,41 @@
             width: 100%;
         }
 
-        .timer-credits {
+        .persona-media {
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
-            position: absolute;
-            right: 10px; /* Adjust as needed */
-            top: 10px; /* Adjust as needed */
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
         }
 
-        .hamburger {
-            margin-right: 10px; /* Adjust as needed */
+        .persona-media img {
+            width: 80px; /* Adjust width as needed */
+            height: auto;
+            border-radius: 50%;
+            margin-bottom: 10px; /* Space between image and audio wave */
         }
 
-        /* Hamburger menu styles */
-        .hamburger {
-            display: inline-block;
-            cursor: pointer;
-            padding: 10px;
-        }
-
-        .hamburger div {
-            width: 25px;
-            height: 3px;
-            background-color: #333;
-            margin: 5px 0;
-        }
-
-
-
-        /* Styles for past conversations modal */
-
-
-
-        .vertical-tabs {
+        .audio-wave {
             display: flex;
-            flex-direction: row;
-            height: 70vh; /* Set height for the modal content */
-            overflow: hidden;
-            transition: transform 0.3s ease;
+            justify-content: center;
+            width: 100%; /* Ensure it spans the full width */
+            height: 30px; /* Set a fixed height */
         }
 
-        .tab-links {
-            flex: 1;
-            max-width: 200px;
-            overflow-y: auto; /* Enable vertical scroll for tabs */
-            border-right: 1px solid #ccc;
-        }
-
-        .tab-links button {
-            display: block;
-            background-color: #f1f1f1;
-            color: black;
-            padding: 10px 15px;
-            width: 100%;
-            border: none;
-            outline: none;
-            text-align: left;
-            cursor: pointer;
-            transition: 0.3s;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .tab-links button:hover,
-        .tab-links button.active {
-            background-color: #ddd;
-        }
-
-        .tab-content {
-            flex: 3;
-            padding: 10px 20px;
-            overflow-y: auto; /* Enable vertical scroll for chat content */
-            max-height: 100%;
-            background-color: #f9f9f9;
-        }
-
-        .chat-message {
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f0f0f0;
-            font-size: 12px;
-        }
-
-        .feedback-message {
-            padding: 10px;
-            margin-top: 20px;
-            border: 1px solid #28a745;
-            border-radius: 5px;
-            background-color: #d4edda;
-            font-weight: bold;
-        }
-
-        .back-button {
-            display: none;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-
-        .tab-links.hidden {
-            transform: translateX(-100%);
-        }
-
-        .tab-content.hidden {
-            transform: translateX(100%);
-        }
-
-        #loading-indicator {
-            display: none;
-            width: 200px;
-            height: 200px;
-            margin: 0 auto;
-        }
-
-        #loading-indicator img {
-            width: 100%;
-            height: 100%;
-        }
-
-        #feedback-container {
-            margin-bottom: 80px; /* Adjust the value as needed */
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-height: 30vh;
-            overflow-y: auto;
-            text-align: center; /* Center-align the content */
-        }
-
-        .feedback-message {
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #fff;
-        }
-
-        .timer {
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .pname {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .credits {
-            font-size: 14px;
-            font-weight: normal;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f1f1f1;
-        }
-
-        .container {
-            max-width: 100%;
-            max-height: 100%;
-            margin: 0 auto;
-            padding: 5px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .header {
-            text-align: left;
-            margin-bottom: 10px;
-            font-size: 12px; /* Adjust font size */
-        }
-
-        button:disabled {
-            background-color: #cccccc; /* Change the background color */
-            color: #666666;           /* Change the text color */
-            cursor: not-allowed;      /* Change the cursor to not-allowed */
-            pointer-events: none;     /* Disable pointer events */
-        }
-
-        .back-button {
-            cursor: pointer;
-            margin-right: 10px;
+        .audio-wave img {
+            width: 50px; /* Adjust width as needed */
+            height: 30px; /* Adjust height as needed */
         }
 
         .chat-history {        
             overflow-y: auto; /* Enable scrolling if content overflows */
-            height: 40vh; /* Set height to half the screen */
+            height: 39vh; /* Set height to half the screen */
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
             background-color: #f9f9f9;
             margin-bottom: 10px;
-            bottom: 100px; /* Adjust bottom based on the size of other elements like a navigation bar */
         }
 
         .button-container {
@@ -371,7 +243,7 @@
         .clear-chat-button {
             flex: 0 0 48%; /* Adjust button width for better alignment */
             margin-bottom: 10px; /* Add margin between buttons */
-            padding: 15px; /* Increased padding for better touchability */
+            padding: 10px; /* Increased padding for better touchability */
             background-color: #007bff;
             color: #fff;
             border: none;
@@ -415,12 +287,6 @@
             clear: both;        
             font-size: 12px; /* Adjust font size */
             padding: 3px; /* Adjust padding */
-        }
-
-        .thumbs {
-            float: right;
-            clear: both;
-            /* Other styles for the thumbs icons */
         }
 
         .message-content {
@@ -485,49 +351,67 @@
             transition: background-color 0.3s ease; /* Smooth transition */
         }
 
-        .persona-media {
+        .back-button {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 10px;
+            text-decoration: none;
+            color: black;
+            font-weight: bold;
         }
 
-        .persona-media img {
-            width: 80px; /* Adjust width as needed */
-            height: auto;
-            border-radius: 50%;
-            margin-bottom: 10px; /* Space between image and audio wave */
+        .back-button:hover {
+            text-decoration: underline;
         }
 
-        .audio-wave {
-            display: flex;
-            justify-content: center;
-            width: 100%; /* Ensure it spans the full width */
-            height: 30px; /* Set a fixed height */
+        .container {
+            max-width: 100%;
+            max-height: 100%;
+            margin: 0 auto;
+            padding: 5px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
-        .audio-wave img {
-            width: 50px; /* Adjust width as needed */
-            height: 30px; /* Adjust height as needed */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
         }
+
+        button:disabled {
+            background-color: #cccccc; /* Change the background color */
+            color: #666666;           /* Change the text color */
+            cursor: not-allowed;      /* Change the cursor to not-allowed */
+            pointer-events: none;     /* Disable pointer events */
+        }
+		/* Add this CSS to style the loading indicator */
+        #loading-indicator {
+            display: none;
+            width: 100%; /* Make sure it fits the container */
+            text-align: center; /* Center the image */
+            padding: 20px; /* Add some padding for better spacing */
+        }
+
+        #loading-indicator img {
+            width: 200px; /* Adjust the size of the loading animation */
+            height: 200px; /* Maintain aspect ratio */
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="persona-details" id="persona-details">            
-            <div>
-                <h1 id="persona-header"><a href="/rehearse.html">Back </a></h1>
-            </div>
+        <div class="top-bar">
+            <a href="/rehearse.html" class="back-button">Back</a>
             <div class="hamburger" onclick="openNav()">
                 <div></div>
                 <div></div>
                 <div></div>
             </div>
-            <div class="timer-credits">
-                <div class="timer">Time left: <span id="time">05:00</span></div>
-                <span class="credits">Credits: <span id="credits"></span></span>
-            </div>
+        </div>
+        <div class="timer-credits">
+            <div class="timer">Time left: <span id="time">05:00</span></div>
+            <div class="credits">Credits: <span id="credits"></span></div>
         </div>
 
         <!-- Navigation drawer -->
@@ -536,30 +420,30 @@
             <div id="navLinks"></div>
             <a href="/logout">Logout</a>
         </div>
-        <!-- New div for persona image and audio wave animation -->
+
         <div class="persona-media" id="persona-media">
             <img id="persona-image" src="/path/to/default-image.jpg" alt="Persona Image">
             <div class="pname"><span id="persona-name"></span></div>
             <div class="audio-wave" id="audio-wave">
                 <img src="/static/audio-wave-placeholder.gif" alt="Audio Wave Animation" id="audio-wave-placeholder">
             </div>
-			<!-- Tone selector -->
-			<div class="tone-selector">				
-				<select id="tone-selector">
-					<option value="">Select Tone:</option>
-					<option value="polite">Polite</option>
-					<option value="rude">Rude</option>
-					<option value="angry">Angry</option>
-					<option value="friendly">Friendly</option>
-					<option value="formal">Formal</option>
-					<option value="casual">Casual</option>
-					<option value="enthusiastic">Enthusiastic</option>
-					<option value="calm">Calm</option>
-				</select>
-			</div>
+            <!-- Tone selector -->
+            <div class="tone-selector">
+                <select id="tone-selector">
+                    <option value="">Select Tone:</option>
+                    <option value="polite">Polite</option>
+                    <option value="rude">Rude</option>
+                    <option value="angry">Angry</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="formal">Formal</option>
+                    <option value="casual">Casual</option>
+                    <option value="enthusiastic">Enthusiastic</option>
+                    <option value="calm">Calm</option>
+                </select>
+            </div>
         </div>
-        <div class="chat-history" id="chat-history"></div>        
-        <div class="button-container">                
+        <div class="chat-history" id="chat-history"></div>
+        <div class="button-container">
             <button id="startButton" class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
             <button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
         </div>
@@ -574,11 +458,11 @@
     <div id="pastConversationsModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeModal()">&times;</span>
-            <h2>Past Conversations</h2>                           
-                <div class="tab-content" id="tab-content">
-                    <!-- Chat histories will be dynamically displayed here -->
-                    <button class="back-button" onclick="showTabs()">Back</button>
-				</div>					
+            <h2>Past Conversations</h2>
+            <div class="tab-content" id="tab-content">
+                <!-- Chat histories will be dynamically displayed here -->
+                <button class="back-button" onclick="showTabs()">Back</button>
+            </div>
         </div>
     </div>
 
