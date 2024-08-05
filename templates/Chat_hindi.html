@@ -736,6 +736,24 @@
 			disableStartButton();
 			closeConversation(conversation_id);
 			stopTimer();
+			// Deduct credit after closing the conversation
+			fetch('/auth/deduct_credit', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					"X-CSRFToken": csrfToken
+				}
+			})
+			.then(response => response.json())
+			.then(data => {
+				console.log("Credit deduction response:", data);
+				credits = data.credits;
+				document.getElementById('credits').textContent = credits;
+				if (credits <= 0) {
+					disableStartButton();
+				}
+			})
+			.catch(error => console.error('Error deducting credit:', error));
 			return;
 		}
 
