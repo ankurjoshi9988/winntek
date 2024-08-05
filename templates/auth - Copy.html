@@ -53,11 +53,45 @@
                     <label class="form-check-label" for="remember">Remember Me</label>
                 </div>
                 <button type="submit" class="btn btn-primary">Login</button>
-                
+                <a href="{{ url_for('auth.google_login') }}" class="btn btn-danger">Login with Google</a>
             </form>
         </div>
 
- 
+        <!-- Registration Form -->
+        <div class="tab-pane fade {% if tab == 'register' %}show active{% endif %}" id="register" role="tabpanel">
+            <form action="{{ url_for('auth.register') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="new-username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="new-username" name="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="new-password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="new-password" name="password" required>
+                </div>
+                <div class="mb-3">
+                    <label for="confirm-password" class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control" id="confirm-password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+        </div>
+
+        <!-- Reset Password Request Form -->
+        <div class="tab-pane fade {% if tab == 'reset' %}show active{% endif %}" id="reset" role="tabpanel">
+            <form action="{{ url_for('auth.reset_password_request') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="reset-email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="reset-email" name="email" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Send Reset Link</button>
+            </form>
+        </div>
     </div>
 </div>
 </body>

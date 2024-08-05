@@ -312,7 +312,12 @@ async def start_conversation1(persona):
     print(f"New conversation_id: {conversation_id}")
 
     agent_message = request.json.get('message')
-    tone = session.get('tone', 'polite')  # Default tone is polite if not set
+    # Check if tone is provided in the request and update the session
+    tone = request.json.get('tone')
+    if tone:
+        session['tone'] = tone
+    else:
+        tone = session.get('tone', 'polite')  # Default tone is polite if not set
     audio_file_name = str(uuid.uuid4()) + ".mp3"
     # Determine the gender of the persona
     persona_gender = persona_data[persona]["Gender"]
@@ -324,6 +329,7 @@ async def start_conversation1(persona):
         selected_voice = "hi-IN-SwaraNeural"  # Default to female voice if no match found
 
     print("selected_voice", selected_voice)  # Debugging information
+    print("tone", tone)  # Debugging information
 
     message2 = [
         SystemMessage(
