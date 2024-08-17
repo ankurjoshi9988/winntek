@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recall</title>
-	<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
@@ -24,13 +24,14 @@
             flex: 1;
             width: 100%;
             max-width: 600px;
-            padding: 20px;
+            padding: 0; /* Removed padding */
             box-sizing: border-box;
             background: #fff;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-top: 20px;
-            overflow-y: auto; /* Make the container scrollable */
-            max-height: calc(100vh - 250px); /* Adjust height to avoid overlapping with the bottom container */
+            margin-top: 0;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+            
         }
         .bottom-container {
             width: 100%;
@@ -128,26 +129,32 @@
             border-radius: 5px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        #response-container {
-            max-height: 480x; /* Set a fixed height */
-            overflow-y: auto; /* Make it scrollable */
-            padding: 5px;
-            box-sizing: border-box;
-            background: #f9f9f9;
-            margin-bottom: 10px;
-            width: 100%;
-        }
+       
+		#response-container {
+			margin-top: 5px; /* Reduced top margin */
+			padding-top: 5px; /* Reduced top padding */
+			margin-left: 7px; /* Added left margin */
+			margin-right: 7px; /* Added right margin */
+		}
+
+		#response-content {
+			padding-top: 5px; /* Ensure no extra padding within content */
+			margin-top: 5px; /* Ensure no extra margin within content */
+			margin-left: 7px; /* Added left margin */
+			margin-right: 7px; /* Added right margin */
+			line-height: 1.5;
+		}
+
+
     </style>
 </head>
 <body>
     <div class="loading-indicator">Uploading...</div>
-
     <div class="container">
         <div id="response-container" style="display: none;">
             <div id="response">
-                <p>Document uploaded...</p>
-                <h2>Response:</h2>
-                <p>{{ response }}</p>
+                <!-- "Response:" header will be added dynamically -->
+                <p id="response-content"></p>
             </div>
         </div>
     </div>
@@ -222,21 +229,51 @@
                     contentType: false,
                     success: function(response) {
                         document.title = "Recall";
-                        document.querySelector('.loading-indicator').style.display = 'none'; // Hide the loading indicator
+                        document.querySelector('.loading-indicator').style.display = 'none';
 
                         document.getElementById('upload-section').style.display = 'none';
                         document.getElementById('ask-section').style.display = 'flex';
                         document.getElementById('response-container').style.display = 'block';
-                        document.getElementById('response').innerHTML = `
-                            <p>Document uploaded...</p>
-                        `;
+                        document.getElementById('response-content').textContent = 'Document uploaded...';
                     },
                     error: function(xhr, status, error) {
-                        document.querySelector('.loading-indicator').style.display = 'none'; // Hide the loading indicator in case of error
+                        document.querySelector('.loading-indicator').style.display = 'none';
                         console.error('Upload error:', error);
                     }
                 });
             });
+
+           
+			
+			function handleResponse(response) {
+				const responseContainer = document.getElementById("response-container");
+				const responseContent = document.getElementById("response-content");
+
+				if (responseContent) {
+					let aiResponse = response.response;
+
+					// Ensure headers or section transitions are followed by two line breaks for spacing
+					aiResponse = aiResponse.replace(/(^.*?):\s*/gm, '$1:<br><br>');
+
+					// Add two line breaks before bullet points for additional spacing
+					aiResponse = aiResponse.replace(/•/g, '<br><br>•');
+
+					// Add two line breaks before numbers followed by a period (e.g., "1.")
+					aiResponse = aiResponse.replace(/(\d+\.)/g, '<br>$1');
+
+					// Add a line break if a sentence ends with a period and the next sentence starts with a capital letter or is a new topic
+					aiResponse = aiResponse.replace(/(\.\s*)([A-Z])/g, '$1<br><br>$2');
+
+					// Insert the formatted response into the content area
+					responseContent.innerHTML = `<h2>Response:</h2> ${aiResponse}`;
+					responseContainer.style.display = 'block';
+				} else {
+					console.error('Element with ID "response-content" not found.');
+				}
+			}
+
+
+
 
             askForm.addEventListener('submit', function(event) {
                 console.log('Form submit event triggered');
@@ -256,12 +293,7 @@
                         },
                         success: function(response) {
                             console.log('AJAX success:', response);
-                            // Assuming the response is in the form {response: 'some text'}
-                            document.getElementById('response').innerHTML = `
-                                <h2>Response:</h2>
-                                <p style="font-size: 12px;">${response.response}</p>
-                            `;
-                            document.getElementById('response-container').style.display = 'block';
+                            handleResponse(response);
                         },
                         error: function(xhr, status, error) {
                             console.error('Ask error:', error);
