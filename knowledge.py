@@ -96,7 +96,7 @@ def get_conversational_chain():
     Provide a clear, structured response with each detail on a separate line, and ensure that there is appropriate spacing between the different sections.
     Start by providing a brief introduction if necessary, and then format the response with each section (e.g., "Policy Term:", "Maturity Age:", "Premium Payment Term:", "Income Start Year:") on a new line.
     If the answer is not found in the provided context, simply state, "उत्तर संदर्भ में उपलब्ध नहीं है" (answer is not available in the context).
-    Avoid generating "**" in response.
+    Avoid generating "**" symbols or special characters in response.
     Do not provide any incorrect information.
     
     संदर्भ (Context):\n {context}\n
@@ -175,6 +175,7 @@ def user_input(user_question):
 
     # Fetch the conversational chain
     chain = get_conversational_chain()
+    print("check")
 
     try:
         # Use `invoke` instead of `__call__` or `run`

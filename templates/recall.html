@@ -307,6 +307,9 @@
 
 				if (responseContent) {
 					let aiResponse = response.response;
+					
+					// Remove any instances of "**" from the response
+					aiResponse = aiResponse.replace(/\*\*/g, '');
 
 					// Ensure that headers/sections start on a new line without adding bold formatting
 					aiResponse = aiResponse.replace(/(^.*?):\s*/gm, '<br>$1:<br>');
