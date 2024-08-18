@@ -5,6 +5,13 @@ FROM python:3.10-slim
 RUN apt-get update && apt-get install -y \
     gcc \
     portaudio19-dev \
+    ghostscript \
+    poppler-utils \
+    tesseract-ocr \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
 
 # Set the working directory in the container
@@ -12,12 +19,12 @@ WORKDIR /app
 
 # Copy only the requirements.txt initially to leverage Docker cache
 COPY requirements.txt .
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Now copy the rest of your application files into the container
 COPY . .
-
 
 # Verify gunicorn installation
 RUN gunicorn --version

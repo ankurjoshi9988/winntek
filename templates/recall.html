@@ -8,6 +8,52 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
+	/* Collapsible section */
+		.collapsible-header {
+			cursor: pointer;
+			padding: 10px;
+			background-color: #007bff;
+			color: white;
+			border: none;
+			text-align: left;
+			outline: none;
+			font-size: 16px;
+			width: 100%;
+		}
+
+		.collapsible-content {
+			padding: 10px;
+			display: none;
+			overflow: hidden;
+			background-color: #f1f1f1;
+			margin-bottom: 10px;
+		}
+
+	/* Highlighted headers */
+		.highlighted-header {
+			font-weight: bold;
+			color: #007bff;
+			background-color: #f0f0f0;
+			padding: 2px 5px;
+			border-radius: 3px;
+		}
+
+		/* Custom bullet points */
+		ul {
+			list-style-type: disc;
+			padding-left: 20px;
+		}
+
+		ul li {
+			margin-bottom: 10px; /* Add space between bullet points */
+		}
+
+		/* Optional: Additional custom styles for numbers */
+		ol {
+			list-style-type: decimal;
+			padding-left: 20px;
+		}
+
         body, html {
             margin: 0;
             padding: 0;
@@ -242,8 +288,18 @@
                     }
                 });
             });
+			
+			function makeCollapsible() {
+				document.querySelectorAll('.collapsible-header').forEach(header => {
+					header.addEventListener('click', function () {
+						const content = this.nextElementSibling;
+						content.style.display = content.style.display === 'none' ? 'block' : 'none';
+					});
+				});
+			}
 
-           
+
+					   
 			
 			function handleResponse(response) {
 				const responseContainer = document.getElementById("response-container");
@@ -252,20 +308,17 @@
 				if (responseContent) {
 					let aiResponse = response.response;
 
-					// Ensure headers or section transitions are followed by two line breaks for spacing
-					aiResponse = aiResponse.replace(/(^.*?):\s*/gm, '$1:<br><br>');
+					// Ensure that headers/sections start on a new line without adding bold formatting
+					aiResponse = aiResponse.replace(/(^.*?):\s*/gm, '<br>$1:<br>');
 
-					// Add two line breaks before bullet points for additional spacing
-					aiResponse = aiResponse.replace(/•/g, '<br><br>•');
+					// Ensure that bullet points have proper line breaks before them
+					aiResponse = aiResponse.replace(/•/g, '<br>•');
 
-					// Add two line breaks before numbers followed by a period (e.g., "1.")
-					aiResponse = aiResponse.replace(/(\d+\.)/g, '<br>$1');
+					// Ensure that each section and bullet point has at least one line of spacing
+					aiResponse = aiResponse.replace(/(\.\s*)([A-Z])/g, '$1<br>$2');
 
-					// Add a line break if a sentence ends with a period and the next sentence starts with a capital letter or is a new topic
-					aiResponse = aiResponse.replace(/(\.\s*)([A-Z])/g, '$1<br><br>$2');
-
-					// Insert the formatted response into the content area
-					responseContent.innerHTML = `<h2>Response:</h2> ${aiResponse}`;
+					// Insert the formatted response into the content area without bold tags
+					responseContent.innerHTML = `Response:<br>${aiResponse}`;
 					responseContainer.style.display = 'block';
 				} else {
 					console.error('Element with ID "response-content" not found.');
