@@ -13,6 +13,7 @@ from flask_login import login_required, current_user
 import camelot
 from pytesseract import image_to_string
 import pdf2image
+import re
 
 knowledge_bp = Blueprint("recall", __name__, url_prefix="/recall")
 
@@ -131,9 +132,9 @@ def upload_document():
         text_chunks = get_text_chunks(raw_text)
         get_vector_store(text_chunks)
         message = "Document uploaded..."
-        return render_template("recall.html", message=message)
+        return jsonify(message=message)
     else:
-        return "No PDF files uploaded."
+        return jsonify(message="No PDF files uploaded.")
 
 
 @knowledge_bp.route("/ask", methods=["POST"])
@@ -149,9 +150,6 @@ def ask_question():
     except Exception as e:
         print(f"Error handling request: {e}")
         return jsonify(response="Internal Server Error"), 500
-
-
-import re
 
 
 def user_input(user_question):

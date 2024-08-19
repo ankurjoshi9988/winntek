@@ -8,6 +8,51 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
+	/* Collapsible section */
+		.collapsible-header {
+			cursor: pointer;
+			padding: 10px;
+			background-color: #007bff;
+			color: white;
+			border: none;
+			text-align: left;
+			outline: none;
+			font-size: 16px;
+			width: 100%;
+		}
+
+		.collapsible-content {
+			padding: 10px;
+			display: none;
+			overflow: hidden;
+			background-color: #f1f1f1;
+			margin-bottom: 10px;
+		}
+
+	/* Highlighted headers */
+		.highlighted-header {
+			font-weight: bold;
+			color: #007bff;
+			background-color: #f0f0f0;
+			padding: 2px 5px;
+			border-radius: 3px;
+		}
+
+		/* Custom bullet points */
+		ul {
+			list-style-type: disc;
+			padding-left: 20px;
+		}
+
+		ul li {
+			margin-bottom: 10px; /* Add space between bullet points */
+		}
+
+		/* Optional: Additional custom styles for numbers */
+		ol {
+			list-style-type: decimal;
+			padding-left: 20px;
+		}
 
         body, html {
             margin: 0;
@@ -21,9 +66,38 @@
             flex-direction: column;
             align-items: center;
         }
-
- 
-
+        .container {
+            flex: 1;
+            width: 100%;
+            max-width: 600px;
+            padding: 0; /* Removed padding */
+            box-sizing: border-box;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 0;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+            
+        }
+        .bottom-container {
+            width: 100%;
+            max-width: 600px;
+            background: #fff;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: fixed;
+            bottom: 50px;
+        }
+        .form-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         input[type="file"], input[type="text"], input[type="submit"], button {
             width: 100%;
             padding: 10px;
@@ -35,23 +109,19 @@
             color: #333;
             cursor: pointer;
         }
-
         input[type="text"] {
             background-color: #e6f7ff;
         }
-
         input[type="submit"].disabled {
             background-color: #ccc;
             cursor: not-allowed;
             color: #666;
         }
-
         input[type="submit"].enabled {
             background-color: #007bff;
             cursor: pointer;
             color: white;
         }
-
         label {
             font-weight: bold;
             margin-bottom: 10px;
@@ -59,7 +129,6 @@
             text-align: left;
             width: 100%;
         }
-
         .toggle-button {
             margin-top: 10px;
             width: 100%;
@@ -69,7 +138,6 @@
             border-radius: 4px;
             cursor: pointer;
         }
-
         nav {
             width: 100%;
             display: flex;
@@ -80,26 +148,22 @@
             position: fixed;
             bottom: 0;
         }
-
         nav a {
             color: white;
             text-decoration: none;
             text-align: center;
             font-size: 12px;
         }
-
         nav a img {
             display: block;
             margin: 0 auto;
             width: 24px;
             height: 24px;
         }
-
         nav a:hover {
             background-color: rgba(255, 255, 255, 0.1);
             transition: background-color 0.3s ease;
         }
-
         .loading-indicator {
             display: none;
             position: fixed;
@@ -111,169 +175,55 @@
             border-radius: 5px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-		#loading-indicator-ask {
-			display: none; /* Initially hidden */
-			text-align: center;
-			color: #007bff;
-			font-size: 16px;
-			margin-top: 10px;
+       
+		#response-container {
+			margin-top: 5px; /* Reduced top margin */
+			padding-top: 5px; /* Reduced top padding */
+			margin-left: 7px; /* Added left margin */
+			margin-right: 7px; /* Added right margin */
 		}
 
-		
-
-		
-		#chat-container {
-			flex: 1;  /* Allows the chat container to grow and fill available space */
-			width: 100%;
-			max-width: 600px;
-			padding: 10px;
-			box-sizing: border-box;
-			background: #fff;
-			box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-			margin-top: 0;
-			overflow-y: auto;  /* Enable vertical scrolling */
-			overflow-x: hidden;  /* Prevent horizontal scrolling */
-			background-color: #f9f9f9;
-			display: flex;
-			flex-direction: column;
-			justify-content: flex-start;  /* Start content at the top */
-			max-height: calc(100vh - 190px);  /* Adjust based on the height of the bottom container */
-		}
-		
-		/* Styles for the bottom container */
-		.bottom-container {
-			width: 100%;
-			max-width: 600px;
-			background: #fff;
-			box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-			padding: 15px;
-			box-sizing: border-box;
-			display: flex;  /* Use flexbox */
-			align-items: center;  /* Vertically center items */
-			justify-content: space-between;  /* Distribute space between input and button */
-			position: fixed;
-			bottom: 50px;  /* Adjust as necessary */
+		#response-content {
+			padding-top: 5px; /* Ensure no extra padding within content */
+			margin-top: 5px; /* Ensure no extra margin within content */
+			margin-left: 7px; /* Added left margin */
+			margin-right: 7px; /* Added right margin */
+			line-height: 1.5;
 		}
 
-
-        .form-container {
-            width: 100%;
-			display: flex;            
-            flex-direction: column;
-            
-        }
-		
-		#upload_form {
-			display: flex;
-			width: 100%;
-			align-items: center; /* Vertically center items */
-		}
-		
-		#pdf_docs {	    
-			margin-right: 10px;
-			padding: 10px;
-			border: 1px solid #ccc;
-			border-radius: 4px;
-			background-color: #f0f0f0;
-			flex-grow: 1;
-			box-sizing: border-box;
-		}
-
-		#upload_button {
-			flex-shrink: 12;
-			padding: 10px 16px;
-			background-color: #007bff;
-			color: white;
-			border: 1px solid #007bff;
-			border-radius: 4px;
-			cursor: pointer;
-			box-sizing: border-box;
-		}
-
-
-		#ask_form {
-			display: flex;
-			width: 100%;
-			align-items: center; /* Vertically center items */
-		}
-
-		#question {
-			margin-right: 10px;
-			padding: 10px;
-			border: 1px solid #ccc;
-			border-radius: 4px;
-			background-color: #e6f7ff;
-			flex-grow: 1;
-			box-sizing: border-box;
-			resize: none; /* Prevent manual resizing */
-			overflow: hidden; /* Hide overflow when resizing */
-			min-height: 40px; /* Set a minimum height */
-			line-height: 1.5; /* Line height for smoother expansion */
-		}
-
-
-
-		.ask-button {
-			flex-shrink: 10;
-			padding: 10px 16px;
-			background-color: #007bff;
-			color: white;
-			border: 1px solid #007bff;
-			border-radius: 4px;
-			cursor: pointer;
-		}
-
-
-		.ask-button.disabled {
-			background-color: #ccc;
-			cursor: not-allowed;
-			color: #666;
-		}
-
-        .chat-message {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        .user-message {
-            background-color: #d1e7dd;
-            text-align: right;
-        }
-
-        .system-message {
-            background-color: #f8d7da;
-            text-align: left;
-        }
 
     </style>
 </head>
 <body>
     <div class="loading-indicator">Uploading...</div>
-    <div id="chat-container">
-		<!-- Loading indicator will appear here while the response is loading -->
-		<div id="loading-indicator-ask" style="display: none;">Loading...</div>
-		<!-- Chat messages will be appended here -->
-	</div>
-
+    <div class="container">
+        <div id="response-container" style="display: none;">
+            <div id="response">
+                <!-- "Response:" header will be added dynamically -->
+                <p id="response-content"></p>
+            </div>
+        </div>
+    </div>
 
     <div class="bottom-container">
         <div id="upload-section" class="form-container">
             <form id="upload_form" action="/recall/upload" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="pdf_docs">Upload PDF Files:</label>
                 <input type="file" id="pdf_docs" name="pdf_docs" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv">
                 <input id="upload_button" type="submit" value="Upload" disabled>
             </form>
         </div>
-		<div id="ask-section" class="form-container" style="display:none;">
-			<form id="ask_form" action="/recall/ask" method="post">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<input type="text" id="question" name="question" placeholder="Ask your question here..." value="">
-				<input id="ask_button" type="submit" value="Ask" class="ask-button">
-			</form>			
-			<button id="toggleButton" class="toggle-button" type="button" onclick="toggleSections()">Upload Document</button>
-		</div>
 
+        <div id="ask-section" class="form-container" style="display:none;">
+            <form id="ask_form" action="/recall/ask" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="question">Enter Your Question:</label>
+                <input type="text" id="question" name="question" placeholder="Ask your question here..." value="">
+                <input id="ask_button" type="submit" value="Ask" disabled>
+            </form>
+            <button id="toggleButton" class="toggle-button" type="button" onclick="toggleSections()">Upload Document</button>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -283,13 +233,6 @@
             var askForm = document.getElementById('ask_form');
             var askButton = document.getElementById('ask_button');
             var questionInput = document.getElementById('question');
-			// Ensure the loadingIndicator is properly defined
-			var chatContainer = document.getElementById('chat-container'); // Make sure this is accessible globally
-			var loadingIndicator = document.createElement('div');
-			loadingIndicator.id = 'loading-indicator-ask';
-			loadingIndicator.textContent = 'Loading...';
-			loadingIndicator.style.display = 'none'; 
-
 
             document.getElementById('pdf_docs').addEventListener('change', function() {
                 var files = this.files;
@@ -299,14 +242,10 @@
             });
 
             questionInput.addEventListener('input', function() {
-				// Add the dynamic resizing functionality here
-				this.style.height = 'auto';  // Reset height
-				this.style.height = (this.scrollHeight) + 'px';  // Set it to the scroll heigh
                 var questionValue = this.value.trim();
                 askButton.disabled = questionValue === '';
                 toggleButtonState(askButton);
                 console.log("Question input changed to:", questionValue);
-				
             });
 
             function toggleButtonState(button) {
@@ -337,10 +276,11 @@
                     success: function(response) {
                         document.title = "Recall";
                         document.querySelector('.loading-indicator').style.display = 'none';
-						
+
                         document.getElementById('upload-section').style.display = 'none';
                         document.getElementById('ask-section').style.display = 'flex';
-                        appendMessage('Document uploaded...', 'system-message');
+                        document.getElementById('response-container').style.display = 'block';
+                        document.getElementById('response-content').textContent = 'Document uploaded...';
                     },
                     error: function(xhr, status, error) {
                         document.querySelector('.loading-indicator').style.display = 'none';
@@ -348,32 +288,48 @@
                     }
                 });
             });
-
-            function appendMessage(message, className) {
-				const chatContainer = document.getElementById('chat-container');
-				const messageElement = document.createElement('div');
-				messageElement.className = `chat-message ${className}`;
-
-				// Remove any instances of "**" from the response
-				let formattedMessage = message.replace(/\*\*/g, '');
-
-				// Ensure that headers/sections start on a new line with bold formatting
-				formattedMessage = formattedMessage.replace(/(^.*?):\s*/gm, '<br><b>$1:</b><br>');
-
-				// Ensure that bullet points have proper line breaks before them
-				formattedMessage = formattedMessage.replace(/•/g, '<br>•');
-
-				// Ensure that each section and bullet point has at least one line of spacing
-				formattedMessage = formattedMessage.replace(/(\.\s*)([A-Z])/g, '$1<br><br>$2');
-
-				// Insert the formatted response into the content area with proper formatting
-				messageElement.innerHTML = formattedMessage;
-				chatContainer.appendChild(messageElement);
-
-				// Scroll to the bottom of the chat container
-				chatContainer.scrollTop = chatContainer.scrollHeight;
-			}
 			
+			function makeCollapsible() {
+				document.querySelectorAll('.collapsible-header').forEach(header => {
+					header.addEventListener('click', function () {
+						const content = this.nextElementSibling;
+						content.style.display = content.style.display === 'none' ? 'block' : 'none';
+					});
+				});
+			}
+
+
+					   
+			
+			function handleResponse(response) {
+				const responseContainer = document.getElementById("response-container");
+				const responseContent = document.getElementById("response-content");
+
+				if (responseContent) {
+					let aiResponse = response.response;
+					
+					// Remove any instances of "**" from the response
+					aiResponse = aiResponse.replace(/\*\*/g, '');
+
+					// Ensure that headers/sections start on a new line without adding bold formatting
+					aiResponse = aiResponse.replace(/(^.*?):\s*/gm, '<br>$1:<br>');
+
+					// Ensure that bullet points have proper line breaks before them
+					aiResponse = aiResponse.replace(/•/g, '<br>•');
+
+					// Ensure that each section and bullet point has at least one line of spacing
+					aiResponse = aiResponse.replace(/(\.\s*)([A-Z])/g, '$1<br>$2');
+
+					// Insert the formatted response into the content area without bold tags
+					responseContent.innerHTML = `Response:<br>${aiResponse}`;
+					responseContainer.style.display = 'block';
+				} else {
+					console.error('Element with ID "response-content" not found.');
+				}
+			}
+
+
+
 
             askForm.addEventListener('submit', function(event) {
                 console.log('Form submit event triggered');
@@ -383,12 +339,6 @@
                 console.log('Submitting question:', question);
 
                 if (question) {
-                    // Append user question to the chat
-                    appendMessage(question, 'user-message');
-					// Show the loading indicator right below the user's question
-					chatContainer.appendChild(loadingIndicator);
-					loadingIndicator.style.display = 'block';
-
                     $.ajax({
                         url: this.action,
                         type: this.method,
@@ -399,18 +349,10 @@
                         },
                         success: function(response) {
                             console.log('AJAX success:', response);
-							// Hide and remove the loading indicator
-							loadingIndicator.style.display = 'none';
-							chatContainer.removeChild(loadingIndicator)
-                            appendMessage(response.response, 'system-message');
-							// Clear the input field after submission
-							questionInput.value = '';
+                            handleResponse(response);
                         },
                         error: function(xhr, status, error) {
                             console.error('Ask error:', error);
-							// Hide and remove the loading indicator in case of error
-							loadingIndicator.style.display = 'none';
-							chatContainer.removeChild(loadingIndicator);
                             alert('An error occurred while submitting the question. Please check the console for details.');
                         }
                     });
@@ -436,6 +378,7 @@
         function toggleSections() {
             document.getElementById('upload-section').style.display = 'flex';
             document.getElementById('ask-section').style.display = 'none';
+            document.getElementById('response-container').style.display = 'none';
         }
     </script>
     <nav>
