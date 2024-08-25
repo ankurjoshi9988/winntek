@@ -140,20 +140,6 @@
             margin-bottom: 10px;
         }
 
-        .select-button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            margin-right: 10px;
-        }
-
-        .select-button:hover {
-            background-color: #0056b3;
-        }
 
         nav {
             font-family: 'Roboto', sans-serif;
@@ -187,27 +173,43 @@
             transition: background-color 0.3s ease;
         }
         
-        .custom-persona {
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
+         .custom-persona {
+			padding: 20px;
+			background-color: #fff;
+			border-radius: 10px;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			margin-bottom: 20px;
+		}
 
-        .custom-persona input, .custom-persona select {
-            width: calc(50% - 20px);
-            padding: 10px;
-            margin: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
+		.custom-persona input, .custom-persona select {
+			width: calc(100% - 20px); /* Use full width of the container */
+			padding: 10px;
+			margin: 10px 0;
+			border-radius: 5px;
+			border: 1px solid #ccc;
+		}
 
-        .custom-persona h3 {
-            font-size: 15px;
-            margin-bottom: 10px;
-            color: #333;
-        }
+		.button-container {
+			display: flex;
+			flex-direction: column;
+			gap: 10px; /* Add spacing between buttons */
+			margin-top: 10px;
+		}
+
+		.select-button {
+			padding: 10px 20px;
+            		background-color: #007bff;
+            		color: #fff;
+            		border: none;
+            		border-radius: 5px;
+            		cursor: pointer;
+            		transition: background-color 0.3s ease;
+            		margin-right: 10px;
+		}
+
+		.select-button:hover {
+			background-color: #0056b3;
+		}
     </style>
 </head>
 
@@ -219,24 +221,29 @@
                 <button class="back-to-home-btn" onclick="navigateHome()">Home</button>
             </div>
         </div>
-        <div class="persona-list-container" id="personaListContainer">
+		<div class="persona-list-container" id="personaListContainer">
             <!-- Blank persona card for custom persona creation -->
             <div class="persona-card custom-persona">
-                <h3>Create Custom Persona</h3>
-                <input type="text" id="customName" placeholder="Name">
-                <input type="number" id="customAge" placeholder="Age">
-                <select id="customGender">
-                    <option value="">Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                </select>
-                <input type="text" id="customOccupation" placeholder="Occupation">
-                <input type="text" id="customMaritalStatus" placeholder="Marital Status">
-                <input type="text" id="customFamilyMembers" placeholder="Family Members">
-                <input type="text" id="customFinancialGoal" placeholder="Financial Goal">
-                <button class="select-button" onclick="createCustomPersona('Hindi')">Create in Hindi</button>
-                <button class="select-button" onclick="createCustomPersona('English')">Create in English</button>
-            </div>
+				<h3>Create Custom Persona</h3>
+				<input type="text" id="customName" placeholder="Name">
+				<input type="number" id="customAge" placeholder="Age">
+				<select id="customGender">
+					<option value="">Gender</option>
+					<option value="Male">Male</option>
+					<option value="Female">Female</option>
+				</select>
+				<input type="text" id="customOccupation" placeholder="Occupation">
+				<input type="text" id="customMaritalStatus" placeholder="Marital Status">
+				<input type="text" id="customFamilyMembers" placeholder="Family Members">
+				<input type="text" id="customFinancialGoal" placeholder="Financial Goal">
+
+				<!-- Button container -->
+				
+					<button class="select-button" onclick="createCustomPersona('Hindi')">Hindi</button>
+					<button class="select-button" onclick="createCustomPersona('English')">English</button>
+				
+			</div>
+
             <!-- Persona cards will be dynamically generated here -->
         </div>
     </div>
