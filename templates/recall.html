@@ -356,6 +356,9 @@
 
 				// Remove any instances of "**" from the response
 				let formattedMessage = message.replace(/\*\*/g, '');
+				
+				// Ensure that bullet points have proper line breaks before them
+				formattedMessage = formattedMessage.replace(/Ÿ/g, '<br>• ');
 
 				// Ensure that headers/sections start on a new line with bold formatting
 				formattedMessage = formattedMessage.replace(/(^.*?):\s*/gm, '<br><b>$1:</b><br>');

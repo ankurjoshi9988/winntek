@@ -178,9 +178,17 @@ def user_input(user_question):
     try:
         # Use `invoke` instead of `__call__` or `run`
         response = chain.invoke({"input_documents": docs, "question": user_question})
-
+        """
+        model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+        OneInputPrompt = PromptTemplate.from_template(
+            "I have a response text in {formatted} that I want to format for readability. The text may contain headers or sections")
+        format_OneInputPrompt = OneInputPrompt.format(formatted=response)
+        response2 = model.invoke(format_OneInputPrompt)
+        """
         # Handle the response text to ensure proper formatting
         formatted_response = response["output_text"]
+
+
 
         # Use regex to dynamically detect and format headers or sections
         # This will look for patterns like "Some Header:" and insert a line break before them
