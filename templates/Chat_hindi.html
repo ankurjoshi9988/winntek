@@ -646,18 +646,22 @@
 			}
 		});
 	});
-
+	
+	
+	
 	function startVoiceConversation() {
+		console.log("startVoiceConversation function called");
 		if (credits > 0 && !timerEnded) { // Check if the timer has not ended
 			let display = document.querySelector('#time');
 			var selectedTone = document.getElementById('tone-selector').value; // Get selected tone
+			
 			if (!timerStarted) {
 				stopTimer = startTimer(display);
 				timerStarted = true;
 			} else {
 				clearInterval(timerInterval); // Clear the previous timer interval
 				stopTimer = startTimer(display); // Restart the timer with the remaining time
-			}
+			}       
 
 			// Disable the tone selector
 			document.getElementById('tone-selector').disabled = true;
@@ -682,13 +686,17 @@
 				var chatHistory = document.getElementById('chat-history');
 				chatHistory.scrollTop = chatHistory.scrollHeight;
 
-				var conversation_id = sessionStorage.getItem('conversation_id');
+				var conversation_id = sessionStorage.getItem('conversation_id');			
 
 				if (!conversation_id) {
+				
+					
+				
 					$.ajax({
 						url: "/start_conversation/" + persona,
 						type: "POST",
-						data: JSON.stringify({ message: transcript, tone: selectedTone }), // Send tone with the message
+						data: JSON.stringify({ message: transcript, tone: selectedTone  }), // Send tone with the message
+						
 						contentType: "application/json",
 						headers: {
 							"X-CSRFToken": csrfToken
@@ -727,6 +735,7 @@
 			recognition.start();
 		}
 	}
+
 
 	function handleUserMessage(transcript, conversation_id, tone) {
 		if (timerEnded) return; // Do nothing if the timer has ended

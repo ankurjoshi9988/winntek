@@ -171,6 +171,28 @@ def read_persona_details_from_csv(csv_file):
 
 persona_data = read_persona_details_from_csv('static/persona_details.csv')
 
+
+@app.route('/set_custom_persona', methods=['POST'])
+@login_required
+def set_custom_persona():
+    custom_persona = request.json
+    name = custom_persona['name']
+
+    # Add the custom persona to the persona_data dictionary
+    persona_data[name] = {
+        'Age': custom_persona['age'],
+        'Gender': custom_persona['gender'],
+        'Occupation': custom_persona['occupation'],
+        'Marital Status': custom_persona['maritalStatus'],
+        'Income Range': 'Unknown',  # You can set default values if needed
+        'Location': 'Unknown',  # Or capture these details from the user
+        'Financial Goals': custom_persona['financialGoal'],
+        'Category': 'Custom'  # Indicating that this is a custom persona
+    }
+
+    return jsonify({"status": "Custom persona set successfully"})
+
+
 @app.route('/load-personas')
 @login_required
 def load_personas():
@@ -318,17 +340,15 @@ async def start_conversation1(persona):
         session['tone'] = tone
     else:
         tone = session.get('tone', 'polite')  # Default tone is polite if not set
+    print(f"Received tone: {tone}")
     audio_file_name = str(uuid.uuid4()) + ".mp3"
-    # Determine the gender of the persona
+
     persona_gender = persona_data[persona]["Gender"]
-    print("persona_gender", persona_gender)  # Debugging information
-
     # Select the voice based on persona's gender
-    selected_voice = VOICE_MAPPING.get(persona_gender)
-    if not selected_voice:
-        selected_voice = "hi-IN-SwaraNeural"  # Default to female voice if no match found
 
-    print("selected_voice", selected_voice)  # Debugging information
+    # Select the correct voice
+    selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
+    print(f"Selected voice: {selected_voice}")
     print("tone", tone)  # Debugging information
 
     message2 = [
@@ -357,8 +377,6 @@ async def start_conversation1(persona):
     response = await asyncio.to_thread(llm.invoke, message2)
     customer_message = response.content
     print("Mahesh: ", customer_message)
-
-
 
     # Azure Text-to-Speech implementation
     speech_config = speechsdk.SpeechConfig(subscription=azure_subscription_key, region=azure_region)

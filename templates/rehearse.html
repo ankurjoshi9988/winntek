@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rehearse</title>
-	<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+	<meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         .flex-container {
             display: flex;
@@ -14,47 +15,47 @@
         }
         .text-container {
             align-items: top;
-            margin-left: 10px; /* Adjust margin as needed */
-            width: 100px; /* Adjust image width as needed */
-            white-space: nowrap; /* Prevent text from wrapping */
-            font-size: 12px; /* Set the font size to 14px or any other size as desired */
-            line-height: 0.5; /* Set the line height to reduce spacing */            
+            margin-left: 10px;
+            width: 100px;
+            white-space: nowrap;
+            font-size: 12px;
+            line-height: 0.5;           
         }
         
         .picture-wrapper {
             display: flex;
-            align-items: center; /* Align items vertically center */
+            align-items: center;
         }
 
         .persona-picture {
-            width: 100px; /* Adjust image width as needed */
+            width: 100px;
             height: auto;
-            margin-right: 10px; /* Add some space between image and text */
+            margin-right: 10px;
         }
 
         .text-wrapper {
-            margin-left: 500px; /* Add some space between image and text */
+            margin-left: 500px;
         }
 
         .persona-list-wrapper {
-            max-height: calc(100vh - 160px); /* Adjust as needed */
-            overflow-y: auto; /* Enable vertical scrolling */
-            padding-top: 120px; /* Adjust as needed */
-            overflow-x: hidden; /* Prevent horizontal scrolling */
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+            padding-top: 120px;
+            overflow-x: hidden;
         }
 
         @media (min-width: 768px) {
             .persona-list-container {
-                max-height: calc(100vh - 80px); /* Adjust as needed for desktop view */
-                overflow-x: hidden; /* Prevent horizontal scrolling */
+                max-height: calc(100vh - 80px);
+                overflow-x: hidden;
             }
         }
 
         .persona-list-container {
-            max-height: calc(100vh - 160px); /* Adjust as needed */
-            overflow-y: auto; /* Enable vertical scrolling */
-            padding-right: 15px; /* Add padding to compensate for scrollbar width */
-            overflow-x: hidden; /* Prevent horizontal scrolling */
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+            padding-right: 15px;
+            overflow-x: hidden;
         }
 
         .back-to-home-btn {
@@ -64,7 +65,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            text-decoration: none; /* Remove underline */
+            text-decoration: none;
             transition: background-color 0.3s ease;
         }
 
@@ -171,19 +172,41 @@
             text-decoration: none;
             text-align: center;
             font-size: 9px;
-            flex: 1 1 0; /* Ensures equal distribution and alignment */
+            flex: 1 1 0;
         }
 
         nav a img {
-            display: block; /* Centers image in its flex container */
+            display: block;
             margin: 0 auto;
             width: 24px;
             height: 24px;
         }
 
         nav a:hover {
-            background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
-            transition: background-color 0.3s ease; /* Smooth transition */
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        
+        .custom-persona {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .custom-persona input, .custom-persona select {
+            width: calc(50% - 20px);
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .custom-persona h3 {
+            font-size: 15px;
+            margin-bottom: 10px;
+            color: #333;
         }
     </style>
 </head>
@@ -197,11 +220,34 @@
             </div>
         </div>
         <div class="persona-list-container" id="personaListContainer">
+            <!-- Blank persona card for custom persona creation -->
+            <div class="persona-card custom-persona">
+                <h3>Create Custom Persona</h3>
+                <input type="text" id="customName" placeholder="Name">
+                <input type="number" id="customAge" placeholder="Age">
+                <select id="customGender">
+                    <option value="">Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+                <input type="text" id="customOccupation" placeholder="Occupation">
+                <input type="text" id="customMaritalStatus" placeholder="Marital Status">
+                <input type="text" id="customFamilyMembers" placeholder="Family Members">
+                <input type="text" id="customFinancialGoal" placeholder="Financial Goal">
+                <button class="select-button" onclick="createCustomPersona('Hindi')">Create in Hindi</button>
+                <button class="select-button" onclick="createCustomPersona('English')">Create in English</button>
+            </div>
             <!-- Persona cards will be dynamically generated here -->
         </div>
     </div>
     
     <script>
+		$.ajaxSetup({
+			headers: {
+				"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+			}
+		});
+		var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         $(document).ready(function() {
             // Fetch persona data from CSV file
             $.ajax({
@@ -216,27 +262,21 @@
 
                             results.data.forEach(function(persona) {
                                 if (persona.Name && persona.Age && persona.Occupation && persona["Marital Status"] && persona["Income Range"] && persona.Location && persona["Financial Goals"]) {
-                                    // Construct the persona-specific image filename
                                     var personaFilename = persona.Name.toLowerCase().replace(/\s+/g, '_') + ".jpg";
-                                    
-                                    // Check if the persona-specific image exists
                                     var imageURL = "static/" + personaFilename;
                                     var defaultImageURL = "static/default_image.jpg";
                                     try {
                                         var personaImage = new Image();
                                         personaImage.src = imageURL;
                                         personaImage.onload = function() {
-                                            // If persona-specific image exists, use it
                                             var personaCard = createPersonaCard(persona, imageURL);
                                             personaCard.appendTo(personaListContainer);
                                         };
                                         personaImage.onerror = function() {
-                                            // If persona-specific image doesn't exist, use default image
                                             var personaCard = createPersonaCard(persona, defaultImageURL);
                                             personaCard.appendTo(personaListContainer);
                                         };
                                     } catch (error) {
-                                        // Handle any errors gracefully
                                         console.error("An error occurred while loading persona image:", error);
                                     }
                                 }
@@ -246,7 +286,6 @@
                 }
             });
 
-            // Function to create persona card
             function createPersonaCard(persona, imageURL) {
                 var personaCard = $("<div></div>").addClass("persona-card");
                 var pictureWrapper = $("<div></div>").addClass("picture-wrapper").appendTo(personaCard);            
@@ -254,13 +293,8 @@
                 var detailsWrapper = $("<div></div>").addClass("persona-details-wrapper").appendTo(personaCard);
                 var textWrapper = $("<div></div>").addClass("text-wrapper").appendTo(pictureWrapper);
 
-                // Create a flex container to hold both image and text
                 var flexContainer = $("<div></div>").addClass("flex-container").appendTo(picturePlaceholder);
-
-                // Create an image element and set its source to the determined URL
                 $("<img>").attr("src", imageURL).addClass("persona-picture").appendTo(flexContainer);
-
-                // Create a div to hold the name and occupation text
                 var textContainer = $("<div></div>").addClass("text-container").appendTo(flexContainer);
                 $("<h2></h2>").text(persona.Name).appendTo(textContainer);
                 $("<p><strong>Occupation:</strong> " + persona.Occupation + "</p>").appendTo(textContainer);
@@ -270,14 +304,12 @@
                 $("<p><strong>Location:</strong> " + persona.Location + "</p>").addClass("persona-details").appendTo(detailsWrapper);
                 $("<p><strong>Financial Goals:</strong> " + persona["Financial Goals"] + "</p>").addClass("persona-details").appendTo(detailsWrapper);
                 
-                // Create the "Hindi" button element
                 var hindiButton = $("<button></button>").addClass("select-button").text("Hindi");
                 hindiButton.click(function() {
                     selectPersona(persona.Name, 'Hindi');
                 });
                 hindiButton.appendTo(detailsWrapper);
 
-                // Create the "English" button element
                 var englishButton = $("<button></button>").addClass("select-button").text("English");
                 englishButton.click(function() {
                     selectPersona(persona.Name, 'English');
@@ -294,10 +326,55 @@
 
         function selectPersona(persona, language) {
             var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
-			var imageUrl = $("#personaListContainer").find(`img[alt='${persona}']`).attr('src'); // Get the image URL
             window.location.href = page + "?persona=" + encodeURIComponent(persona);
         }
+
+        function createCustomPersona(language) {
+			var customName = $("#customName").val().trim();
+			var customAge = $("#customAge").val().trim();
+			var customGender = $("#customGender").val().trim();  // Ensure this is correctly captured
+			var customOccupation = $("#customOccupation").val().trim();
+			var customMaritalStatus = $("#customMaritalStatus").val().trim();
+			var customFamilyMembers = $("#customFamilyMembers").val().trim();
+			var customFinancialGoal = $("#customFinancialGoal").val().trim();
+
+			if (customName && customAge && customGender && customOccupation && customMaritalStatus && customFamilyMembers && customFinancialGoal) {
+				// Send custom persona details to the backend
+				$.ajax({
+					url: "/set_custom_persona",
+					type: "POST",
+					contentType: "application/json",
+					headers: {
+						"X-CSRFToken": csrfToken
+					},
+					data: JSON.stringify({
+						name: customName,
+						age: customAge,
+						gender: customGender,
+						occupation: customOccupation,
+						maritalStatus: customMaritalStatus,
+						familyMembers: customFamilyMembers,
+						financialGoal: customFinancialGoal
+					}),
+					success: function(response) {
+						console.log("Custom persona set successfully:", response);
+						var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
+						window.location.href = page + "?persona=" + encodeURIComponent(customName);
+					},
+					error: function(xhr, status, error) {
+						console.error("Error setting custom persona:", error);
+					}
+				});
+			} else {
+				alert("Please fill in all fields to create a custom persona.");
+			}
+		}
+
+
+
+
     </script>
+
     <nav>
         <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
         <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
