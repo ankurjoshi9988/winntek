@@ -185,7 +185,7 @@ def set_custom_persona():
         'Occupation': custom_persona['occupation'],
         'Marital Status': custom_persona['maritalStatus'],
         'Income Range': 'Unknown',  # You can set default values if needed
-        'Location': 'Unknown',  # Or capture these details from the user
+        'Family Member': custom_persona['familyMembers'],
         'Financial Goals': custom_persona['financialGoal'],
         'Category': 'Custom'  # Indicating that this is a custom persona
     }
@@ -346,7 +346,7 @@ async def start_conversation1(persona):
 
     persona_gender = persona_data[persona]["Gender"]
     # Select the voice based on persona's gender
-
+    print(persona_data[persona])
     # Select the correct voice
     selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
     print(f"Selected voice: {selected_voice}")
