@@ -304,11 +304,25 @@ def persona_selection():
     return render_template('rehearse.html')
 
 
-@app.route('/Chat_hindi.html')
+@app.route('/Chat_hindi.html', methods=['GET'])
+@app.route('/Chat_english.html', methods=['GET'])
 @login_required
-def chat2():
+def chat():
     persona = request.args.get('persona')
-    return render_template('Chat_hindi.html', persona=persona)
+    language = request.args.get('language')
+
+    if language:
+        session['language'] = language
+    else:
+        language = session.get('language', 'Hindi')  # Default to Hindi if not set
+    print(f"Language selected: {language}")
+
+    if language == 'Hindi':
+        return render_template('Chat_hindi.html', persona=persona)
+    else:
+        return render_template('Chat_english.html', persona=persona)
+
+
 
 #demo
 @app.route('/SampleChat.html')
@@ -337,11 +351,17 @@ async def start_conversation1(persona):
     agent_message = request.json.get('message')
     # Check if tone is provided in the request and update the session
     tone = request.json.get('tone')
+    language = request.json.get('language', 'Hindi')  # Default language is Hindi
     if tone:
         session['tone'] = tone
     else:
         tone = session.get('tone', 'polite')  # Default tone is polite if not set
     print(f"Received tone: {tone}")
+
+    # Retrieve language from the session
+    language = session.get('language', 'Hindi')  # Default language is Hindi if not set
+    print(f"Language in start_conversation1: {language}")
+
     audio_file_name = str(uuid.uuid4()) + ".mp3"
 
     persona_gender = persona_data[persona]["Gender"]
@@ -351,6 +371,11 @@ async def start_conversation1(persona):
     selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
     print(f"Selected voice: {selected_voice}")
     print("tone", tone)  # Debugging information
+
+    if language == 'Hindi':
+        language_instruction = "YOU HAVE A CONVERSATION IN HINDI."
+    else:
+        language_instruction = "YOU HAVE A CONVERSATION IN ENGLISH."
 
     message2 = [
         SystemMessage(
@@ -363,7 +388,7 @@ async def start_conversation1(persona):
                 - YOUR PROFILE: "{persona}" AND "{persona_data[persona]}".
                 - YOUR TONE: "{tone.upper()}".
                 - ANSWER ONLY TO WHAT HAS BEEN ASKED RELATED TO CONTEXT.
-                - YOU KNOW HINDI AND ENGLISH LANGUAGE VERY WELL. YOU HAVE A CONVERSATION IN HINDI.
+                - YOU KNOW HINDI AND ENGLISH LANGUAGE VERY WELL. {language_instruction}
                 - REMEMBER, TAKE A DEEP BREATH AND THINK TWICE BEFORE RESPONDING.
                 - KEEP THE CONTEXT OF THE CURRENT CONVERSATION IN MIND AND TAKE IT TOWARDS A POSITIVE END STEP BY STEP BY RESPONDING TO EACH QUERY ONE BY ONE.
                 - AVOID RESPONDING AS THE AGENT OR PRODUCING A COMPLETE SCRIPT.

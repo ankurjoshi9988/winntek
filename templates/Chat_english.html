@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <title>Insurance Chatbot</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f1f1f1;
+        }
+
+        .top-bar .back-button,
+        .top-bar .hamburger {
+            cursor: pointer;
+        }
+
+        .top-bar .hamburger div {
+            width: 25px;
+            height: 3px;
+            background-color: #333;
+            margin: 5px 0;
+        }
+
+        .timer-credits {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .tone-selector {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .tone-selector label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tone-selector select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+
+        .agent-message {
+            background-color: #e1f5fe; /* Light blue */
+            border-left: 5px solid #0288d1; /* Darker blue */
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .customer-message {
+            background-color: #ffebee; /* Light red */
+            border-right: 5px solid #d32f2f; /* Darker red */
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+		#feedback-container {
+			margin-bottom: 60px; /* Adjust the value as needed */
+			padding: 10px;
+			background-color: #f9f9f9;
+			border-radius: 10px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+			max-height: 35vh; /* Adjust the max-height to fit the screen better */
+			overflow-y: auto; /* Enable vertical scrolling */
+			text-align: center; /* Center-align the content */
+		}
+
+        .feedback-section {
+            border: 1px solid;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .feedback-overall {
+            color: #28a745;
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+
+        .feedback-individual {
+            color: #d32f2f;
+            border-color: #d32f2f;
+            background-color: #f8d7da;
+        }
+
+        .feedback-overall h3, .feedback-individual h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+
+        .feedback-overall p, .feedback-individual p {
+            font-weight: normal;
+            margin-bottom: 5px;
+            white-space: pre-wrap;
+        }
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; /* Center vertically and horizontally */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%; /* Could be more or less, depending on screen size */
+            max-width: 800px; /* Limit maximum width */
+            overflow: hidden;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .nav-drawer {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            background-color: #111;
+            overflow-x: hidden;
+            transition: 0.5s;
+            padding-top: 60px;
+        }
+
+        .nav-drawer a {
+            padding: 8px 8px 8px 16px; /* Adjust padding to reduce white space */
+            text-decoration: none;
+            font-size: 25px;
+            color: #818181;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .nav-drawer a:hover {
+            color: #f1f1f1;
+        }
+
+        .nav-drawer .closebtn {
+            position: absolute;
+            top: 0;
+            right: 25px;
+            font-size: 36px;
+            margin-left: 50px;
+        }
+
+        .persona-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            position: relative;
+        }
+
+        .persona-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .persona-media {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .persona-media img {
+            width: 80px; /* Adjust width as needed */
+            height: auto;
+            border-radius: 50%;
+            margin-bottom: 10px; /* Space between image and audio wave */
+        }
+
+        .audio-wave {
+            display: flex;
+            justify-content: center;
+            width: 100%; /* Ensure it spans the full width */
+            height: 30px; /* Set a fixed height */
+        }
+
+        .audio-wave img {
+            width: 50px; /* Adjust width as needed */
+            height: 30px; /* Adjust height as needed */
+        }
+
+        .chat-history {        
+            overflow-y: auto; /* Enable scrolling if content overflows */
+            height: 39vh; /* Set height to half the screen */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+        }
+
+        .send-button,
+        .clear-chat-button {
+            flex: 0 0 48%; /* Adjust button width for better alignment */
+            margin-bottom: 10px; /* Add margin between buttons */
+            padding: 10px; /* Increased padding for better touchability */
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .clear-chat-button {
+            background-color: #dc3545;
+        }
+
+        .thumbs {
+            float: right;
+            clear: both;
+            /* Other styles for the thumbs icons */
+        }
+
+        .thumbs button {
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .thumbs button img {
+            width: 17px;
+            height: 17px;
+        }
+
+        .agent-message {
+            text-align: left;
+            font-size: 12px; /* Adjust font size */
+            padding: 3px; /* Adjust padding */
+        }
+
+        .message-wrapper {
+            overflow: auto; /* Ensure the wrapper contains floating elements */
+        }
+
+        .customer-message {
+            float: right;
+            clear: both;        
+            font-size: 12px; /* Adjust font size */
+            padding: 3px; /* Adjust padding */
+        }
+
+        .message-content {
+            display: inline-block;
+            background-color: #f2f2f2;        
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin between buttons */
+        }
+
+        .message-content.agent-message {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin at the bottom */
+            margin-right: 20%; /* Add margin to the right side */
+        }
+
+        .message-content.customer-message {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 5px; /* Add margin at the bottom */
+            margin-left: 20%; /* Add margin to the left side */
+        }
+
+        .message-timestamp {
+            font-size: 12px;
+            color: #666;
+        }
+
+        nav {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #333;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 9px;
+            flex: 1 1 0; /* Ensures equal distribution and alignment */
+        }
+
+        nav a img {
+            display: block; /* Centers image in its flex container */
+            margin: 0 auto;
+            width: 24px;
+            height: 24px;
+        }
+
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Adjust opacity as needed */
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: black;
+            font-weight: bold;
+        }
+
+        .back-button:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 100%;
+            max-height: 100%;
+            margin: 0 auto;
+            padding: 5px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+
+        button:disabled {
+            background-color: #cccccc; /* Change the background color */
+            color: #666666;           /* Change the text color */
+            cursor: not-allowed;      /* Change the cursor to not-allowed */
+            pointer-events: none;     /* Disable pointer events */
+        }
+		/* Add this CSS to style the loading indicator */
+        #loading-indicator {
+            display: none;
+            width: 100%; /* Make sure it fits the container */
+            text-align: center; /* Center the image */
+            padding: 20px; /* Add some padding for better spacing */
+        }
+
+        #loading-indicator img {
+            width: 200px; /* Adjust the size of the loading animation */
+            height: 200px; /* Maintain aspect ratio */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <a href="/rehearse.html" class="back-button">Back</a>
+            <div class="hamburger" onclick="openNav()">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+        </div>
+        <div class="timer-credits">
+            <div class="timer">Time left: <span id="time">05:00</span></div>
+            <div class="credits">Credits: <span id="credits"></span></div>
+        </div>
+
+        <!-- Navigation drawer -->
+        <div id="myNav" class="nav-drawer">
+            <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+            <div id="navLinks"></div>
+            <a href="/logout">Logout</a>
+        </div>
+
+        <div class="persona-media" id="persona-media">
+            <img id="persona-image" src="/path/to/default-image.jpg" alt="Persona Image">
+            <div class="pname"><span id="persona-name"></span></div>
+            <div class="audio-wave" id="audio-wave">
+                <img src="/static/audio-wave-placeholder.gif" alt="Audio Wave Animation" id="audio-wave-placeholder">
+            </div>
+            <!-- Tone selector -->
+            <div class="tone-selector">
+                <select id="tone-selector">
+                    <option value="">Select Tone:</option>
+                    <option value="polite">Polite</option>
+                    <option value="rude">Rude</option>
+                    <option value="angry">Angry</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="formal">Formal</option>
+                    <option value="casual">Casual</option>
+                    <option value="enthusiastic">Enthusiastic</option>
+                    <option value="calm">Calm</option>
+                </select>
+            </div>
+        </div>
+        <div class="chat-history" id="chat-history"></div>
+        <div class="button-container">
+            <button id="startButton" class="send-button" onclick="startVoiceConversation()">Start Voice Conversation</button>
+            <button class="clear-chat-button" onclick="clearChat()">Clear Chat</button>
+        </div>
+        <div id="loading-indicator" style="display: none;">
+            <img src="/static/loadinganim.gif" alt="Generating feedback, please wait...">
+        </div>
+        <div id="feedback-container"></div> <!-- Feedback container -->
+        <audio id="audio-player" controls style="display: none;"></audio>
+    </div>
+
+    <!-- Modal for past conversations -->
+    <div id="pastConversationsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <h2>Past Conversations</h2>
+            <div class="tab-content" id="tab-content">
+                <!-- Chat histories will be dynamically displayed here -->
+                <button class="back-button" onclick="showTabs()">Back</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    $.ajaxSetup({
+        headers: {
+            "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+
+	let timerStarted = false;
+	let timerEnded = false;
+	let timerInterval;
+	let totalTimeElapsed = 0;
+	let remainingTime = 300; // 5 minutes in seconds
+	let credits;
+	let stopTimer;
+	let conversationActive = false;
+	let recognition; // Define recognition variable at a global scope
+
+	document.addEventListener('DOMContentLoaded', function () {
+		// Clear conversation_id when loading the chat page
+		sessionStorage.removeItem('conversation_id');
+		fetch('/auth/get_credits')
+			.then(response => response.json())
+			.then(data => {
+				credits = data.credits;
+				document.getElementById('credits').textContent = credits;
+				if (credits > 0 && !timerEnded) {
+					document.getElementById("startButton").disabled = false;
+				} else {
+					disableStartButton();
+				}
+			});
+
+		// Ensure conversation ID is initialized or cleared when a new persona is selected
+		$.ajax({
+			url: "/clear_session",
+			type: "POST",
+			headers: {
+				"X-CSRFToken": csrfToken
+			},
+			success: function(response) {
+				console.log("Session cleared: ", response);
+				$.ajax({
+					url: "/start_conversation/" + persona,
+					type: "POST",
+					data: JSON.stringify({ message: "" }), // Initial empty message to start the conversation
+					contentType: "application/json",
+					headers: {
+						"X-CSRFToken": csrfToken
+					},
+					success: function(response) {
+						if (response.conversation_id) {
+							sessionStorage.setItem('conversation_id', response.conversation_id);
+						} else {
+							console.error("No conversation_id in response");
+						}
+					},
+					error: function(xhr, status, error) {
+						console.error("Error:", error);
+					}
+				});
+			},
+			error: function(xhr, status, error) {
+				console.error("Error clearing session:", error);
+			}
+		});
+
+		// Add the following code to load the persona image
+		const personaName = new URLSearchParams(window.location.search).get('persona');
+		const personaImage = personaName.toLowerCase().replace(/\s+/g, '_') + ".jpg";
+		const imageUrl = `/static/${personaImage}`;
+		$('#persona-image').attr('src', imageUrl).on('error', function() {
+			$(this).attr('src', '/static/default_image.jpg'); // Fallback image
+		});
+	});
+    // Clear session storage on back button
+    window.addEventListener('popstate', function () {
+        // Clear conversation_id when navigating back to persona list
+        sessionStorage.removeItem('conversation_id');
+    });
+
+	function startTimer(display) {
+		let duration = remainingTime; // Use the remaining time
+		let start = Date.now();
+		let diff, minutes, seconds;
+		let creditsDeducted = false;
+
+		function timer() {
+			diff = duration - (((Date.now() - start) / 1000) | 0);
+			minutes = (diff / 60) | 0;
+			seconds = (diff % 60) | 0;
+			minutes = minutes < 10 ? "0" + minutes : minutes;
+			seconds = seconds < 10 ? "0" + seconds : seconds;
+			display.textContent = minutes + ":" + seconds;
+
+			if (!creditsDeducted && diff <= 0) {
+				console.log("Attempting to deduct credit...");
+				fetch('/auth/deduct_credit', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						"X-CSRFToken": csrfToken
+					}
+				})
+				.then(response => response.json())
+				.then(data => {
+					console.log("Credit deduction response:", data);
+					credits = data.credits;
+					document.getElementById('credits').textContent = credits;
+					if (credits <= 0) {
+						disableStartButton();
+					}
+				})
+				.catch(error => console.error('Error deducting credit:', error));
+				creditsDeducted = true;
+			}
+
+			if (diff <= 0 || display.textContent === "00:00") {
+				clearInterval(timerInterval);
+				display.textContent = "00:00";
+				disableStartButton();
+				timerEnded = true; // Set timerEnded flag to true
+
+				// Get the conversation_id from sessionStorage
+				var conversation_id = sessionStorage.getItem('conversation_id');
+				if (conversation_id) {
+					closeConversation(conversation_id); // Close the conversation when time is up
+				}
+				alert('Time is up! Please re-select another persona to continue.');
+			}
+		}
+
+		function stopTimer() {
+			clearInterval(timerInterval);
+			remainingTime = duration - (((Date.now() - start) / 1000) | 0); // Capture the remaining time
+		}
+
+		timerInterval = setInterval(timer, 1000);
+
+		return stopTimer;
+	}
+
+
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const urlParams = new URLSearchParams(window.location.search);
+    const persona = urlParams.get('persona');
+    document.getElementById('persona-name').innerText = persona;
+
+    function getCurrentTimestamp() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    const closingStatements = ["नेक्स्ट मीटिंग", "I'll be in touch soon", "follow up", "next time", "will get back", "next meeting", "I'll compile all the details","can finalize everything in our next meeting", "It's been a pleasure discussing your needs", "I'll be back with a personalized plan soon", "Take care", "Have a great day", "bye", "I'll prepare the documents", "I'll get the customized policy ready", "goodbye"];
+
+    function detectClosingStatement(transcript) {
+        const lowerTranscript = transcript.toLowerCase();
+        return closingStatements.some(statement => lowerTranscript.includes(statement));
+    }
+	
+	document.getElementById('tone-selector').addEventListener('change', function() {
+		var selectedTone = this.value;
+		$.ajax({
+			url: "/set_tone",
+			type: "POST",
+			contentType: "application/json",
+			data: JSON.stringify({ tone: selectedTone }),
+			headers: {
+				"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+			},
+			success: function(response) {
+				console.log("Tone set successfully:", response);
+			},
+			error: function(xhr, status, error) {
+				console.error("Error setting tone:", error);
+			}
+		});
+	});
+	
+	
+	
+	function startVoiceConversation() {
+		console.log("startVoiceConversation function called");
+		if (credits > 0 && !timerEnded) { // Check if the timer has not ended
+			let display = document.querySelector('#time');
+			var selectedTone = document.getElementById('tone-selector').value; // Get selected tone
+			
+			if (!timerStarted) {
+				stopTimer = startTimer(display);
+				timerStarted = true;
+			} else {
+				clearInterval(timerInterval); // Clear the previous timer interval
+				stopTimer = startTimer(display); // Restart the timer with the remaining time
+			}       
+
+			// Disable the tone selector
+			document.getElementById('tone-selector').disabled = true;
+
+			recognition = new webkitSpeechRecognition();
+			recognition.lang = 'en-IN';  // Adjust as needed
+			recognition.interimResults = false; // Only final results are needed
+			recognition.continuous = true; // Stop recognition on silence
+
+			recognition.onresult = function(event) {
+				var transcript = event.results[0][0].transcript;
+
+				document.getElementById('chat-history').innerHTML += `
+					<div class="message-wrapper">
+						<div class="message-content agent-message">
+							<p>${transcript}</p>
+							<span class="message-timestamp">${getCurrentTimestamp()}</span>
+						</div>
+					</div>
+				`;
+
+				var chatHistory = document.getElementById('chat-history');
+				chatHistory.scrollTop = chatHistory.scrollHeight;
+
+				var conversation_id = sessionStorage.getItem('conversation_id');			
+
+				if (!conversation_id) {
+				
+					
+				
+					$.ajax({
+						url: "/start_conversation/" + persona,
+						type: "POST",
+						data: JSON.stringify({ message: transcript, tone: selectedTone  }), // Send tone with the message
+						
+						contentType: "application/json",
+						headers: {
+							"X-CSRFToken": csrfToken
+						},
+						success: function(response) {
+							if (response.conversation_id) {
+								sessionStorage.setItem('conversation_id', response.conversation_id);
+								handleUserMessage(transcript, response.conversation_id, selectedTone); // Pass tone
+							} else {
+								console.error("No conversation_id in response");
+							}
+						},
+						error: function(xhr, status, error) {
+							console.error("Error:", error);
+						}
+					});
+				} else {
+					handleUserMessage(transcript, conversation_id, selectedTone); // Pass tone
+				}
+			};
+
+			recognition.onerror = function(event) {
+				console.error("Speech recognition error detected: " + event.error);
+			};
+
+			recognition.onspeechend = function() {
+				setTimeout(function() {
+					recognition.stop();
+				}, 3000); // Allow a 2-second pause before stopping recognition
+			};
+
+			recognition.onend = function() {
+				console.log("Speech recognition service disconnected");
+			};
+
+			recognition.start();
+		}
+	}
+
+
+	function handleUserMessage(transcript, conversation_id, tone) {
+		if (timerEnded) return; // Do nothing if the timer has ended
+
+		addMessage('user', transcript, conversation_id);
+
+		if (detectClosingStatement(transcript)) {
+			disableStartButton();
+			closeConversation(conversation_id);
+			stopTimer();
+			// Deduct credit after closing the conversation
+			fetch('/auth/deduct_credit', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					"X-CSRFToken": csrfToken
+				}
+			})
+			.then(response => response.json())
+			.then(data => {
+				console.log("Credit deduction response:", data);
+				credits = data.credits;
+				document.getElementById('credits').textContent = credits;
+				if (credits <= 0) {
+					disableStartButton();
+				}
+			})
+			.catch(error => console.error('Error deducting credit:', error));
+			return;
+		}
+
+		$.ajax({
+			url: "/start_conversation/" + persona,
+			type: "POST",
+			data: JSON.stringify({ message: transcript, tone: tone }), // Send tone with the message
+			contentType: "application/json",
+			headers: {
+				"X-CSRFToken": csrfToken
+			},
+			success: function(response) {
+				if (response.conversation_id) {
+					sessionStorage.setItem('conversation_id', response.conversation_id);
+				}
+				console.log("System Response:", response.text);
+				if (response.audio) {
+					playAudio(response.audio);
+				}
+				if (response.text) {
+					document.getElementById('chat-history').innerHTML += `
+						<div class="message-wrapper">
+							<div class="message-content customer-message">
+								<p>${response.text}</p>
+								<span class="message-timestamp">${getCurrentTimestamp()}</span>
+							</div>
+							<div class="thumbs">
+								<button onclick="thumbsUp('${transcript}', '${response.text}')" title="Thumbs Up"><img src="static/thumbs-up.png" alt="Thumbs Up"></button>
+								<button onclick="thumbsDown('${transcript}', '${response.text}')" title="Thumbs Down"><img src="static/thumbs-down.png" alt="Thumbs Down"></button>
+							</div>
+						</div>
+					`;
+					addMessage('system', response.text, conversation_id);
+
+					var chatHistory = document.getElementById('chat-history');
+					chatHistory.scrollTop = chatHistory.scrollHeight;
+
+					// Ensure the start button is disabled again
+					disableStartButton();
+				}
+			},
+			error: function(xhr, status, error) {
+				console.error("Error:", error);
+			}
+		});
+	}
+
+
+
+    document.getElementById('chat-history').addEventListener('click', function(event) {
+        if (event.target && event.target.matches('.show-english')) {
+            var englishMessage = event.target.dataset.englishMessage;
+            showTranslation(event.target, englishMessage);
+        } else if (event.target && event.target.matches('.show-hindi')) {
+            var hindiMessage = event.target.dataset.hindiMessage;
+            showTranslation(event.target, hindiMessage);
+        }
+    });
+
+    function showTranslation(button, message) {
+        button.style.display = 'none';
+        var pTag = document.createElement('p');
+        pTag.textContent = message;
+        button.parentNode.insertBefore(pTag, button.nextSibling);
+    }
+
+    function thumbsUp(agentMessage, customerMessage) {
+        sendFeedback(agentMessage, customerMessage, 'positive');
+    }
+
+    function thumbsDown(agentMessage, customerMessage) {
+        sendFeedback(agentMessage, customerMessage, 'negative');
+    }
+
+    function sendFeedback(agentMessage, customerMessage, feedback) {
+        var feedbackData = {
+            agent_message: agentMessage,
+            customer_message: customerMessage,
+            feedback: feedback
+        };
+
+        $.ajax({
+            url: "/save_feedback",
+            type: "POST",
+            data: JSON.stringify(feedbackData),
+            contentType: "application/json",
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            success: function(response) {
+                console.log("Feedback saved successfully:", response);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error saving feedback:", error);
+            }
+        });
+    }
+
+    function removeAllAudioFiles() {
+        $.ajax({
+            url: "/remove_all_audio_files",
+            type: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            success: function(response) {
+                console.log(response);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error removing audio files:", error);
+            }
+        });
+    }
+
+    function playAudio(audioUrl) {
+        var audioPlayer = document.getElementById("audio-player");
+        audioPlayer.src = audioUrl;
+        audioPlayer.play();
+
+        // Stop speech recognition when system response audio is playing
+        if (recognition) {
+            recognition.stop();
+        }
+
+        // Show audio wave animation
+        document.getElementById('audio-wave').innerHTML = '<img src="/static/audio-wave.gif" alt="Audio Wave Animation">';
+
+        audioPlayer.addEventListener("ended", function() {
+            removeAllAudioFiles(); // Remove all audio files after playing
+            document.getElementById('audio-wave').innerHTML = '<img src="/static/audio-wave-placeholder.gif" alt="Audio Wave Animation" id="audio-wave-placeholder">';
+            if (typeof stopTimer === 'function') {
+                stopTimer(); // Stop the timer after system response
+            }
+            timerStarted = false; // Reset the timerStarted flag
+
+            // Enable the start button to restart the conversation
+            enableStartButton();
+        });
+    }
+
+    function goBack() {
+        window.location.href = "/static/rehears.html";
+    }
+
+    function clearChat() {
+        document.getElementById('chat-history').innerHTML = '';
+        document.getElementById('message-input').value = '';
+    }
+
+    function disableStartButton() {
+        const startButton = document.getElementById("startButton");
+        startButton.disabled = true;
+        startButton.style.backgroundColor = "#cccccc";
+        startButton.style.cursor = "not-allowed";
+    }
+
+    function enableStartButton() {
+        const startButton = document.getElementById("startButton");
+        startButton.disabled = false;
+        startButton.style.backgroundColor = "";
+        startButton.style.cursor = "pointer";
+    }
+
+    function addMessage(sender, content, conversation_id) {
+        console.log("Retrieved conversation_id 123:", conversation_id);
+        if (!conversation_id) {
+            console.error('No conversation ID found');
+            return;
+        }
+
+        $.ajax({
+            url: '/add_message',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                conversation_id: conversation_id,
+                sender: sender,
+                content: content
+            }),
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            success: function(response) {
+                console.log('Message added:', response);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error adding message:', error);
+            }
+        });
+    }
+
+    function closeConversation(conversation_id) {
+        // Show loading indicator
+        document.getElementById('loading-indicator').style.display = 'block';
+        // Ensure the start button remains disabled
+        disableStartButton();
+
+        // Scroll to feedback container
+        document.getElementById('feedback-container').scrollIntoView({ behavior: 'smooth' });
+
+        $.ajax({
+            url: '/close_conversation',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ conversation_id: conversation_id }),
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            success: function(response) {
+                console.log('Conversation closed:', response);
+                if (response.feedback) { // Use the translated feedback
+                    showFeedback(response.feedback);
+                }
+
+                // Hide loading indicator after feedback is shown
+                document.getElementById('loading-indicator').style.display = 'none';
+            },
+            error: function(xhr, status, error) {
+                console.error('Error closing conversation:', error);
+
+                // Hide loading indicator if there's an error
+                document.getElementById('loading-indicator').style.display = 'none';
+            }
+        });
+    }
+
+    function showFeedback(feedback) {
+    const feedbackContainer = document.getElementById('feedback-container');
+    feedbackContainer.innerHTML = ''; // Clear previous feedback
+
+    let overallFeedback, individualFeedback, overallTitleText, individualTitleText;
+
+    if (/कुल फ़ीडबैक:/.test(feedback)) { // Check if feedback is in Hindi
+        const overallFeedbackMatch = feedback.match(/कुल फ़ीडबैक:\n(.+?)\nव्यक्तिगत फ़ीडबैक:/s);
+        const individualFeedbackMatch = feedback.match(/व्यक्तिगत फ़ीडबैक:\n(.+)/s);
+
+        overallFeedback = overallFeedbackMatch ? overallFeedbackMatch[1].trim() : 'कोई कुल फ़ीडबैक उपलब्ध नहीं है।';
+        individualFeedback = individualFeedbackMatch ? individualFeedbackMatch[1].trim() : 'कोई व्यक्तिगत फ़ीडबैक उपलब्ध नहीं है।';
+
+        overallTitleText = 'कुल फ़ीडबैक';
+        individualTitleText = 'व्यक्तिगत फ़ीडबैक';
+    } else { // Default to English
+        const overallFeedbackMatch = feedback.match(/Overall Feedback:\n(.+?)\nIndividual Feedback:/s);
+        const individualFeedbackMatch = feedback.match(/Individual Feedback:\n(.+)/s);
+
+        overallFeedback = overallFeedbackMatch ? overallFeedbackMatch[1].trim() : 'No overall feedback available.';
+        individualFeedback = individualFeedbackMatch ? individualFeedbackMatch[1].trim() : 'No individual feedback available.';
+
+        overallTitleText = 'Overall Feedback';
+        individualTitleText = 'Individual Feedback';
+    }
+
+    // Create overall feedback section
+    const overallSection = document.createElement('div');
+    overallSection.style.border = '1px solid #28a745';
+    overallSection.style.padding = '10px';
+    overallSection.style.marginBottom = '10px';
+    overallSection.style.fontSize = '14px';
+    overallSection.style.backgroundColor = '#d4edda';
+    overallSection.style.borderRadius = '5px';
+
+    const overallTitle = document.createElement('h3');
+    overallTitle.innerText = overallTitleText;
+    overallTitle.style.fontWeight = 'bold';
+    overallSection.appendChild(overallTitle);
+
+    const overallText = document.createElement('p');
+    overallText.innerText = overallFeedback;
+    overallSection.appendChild(overallText);
+
+    feedbackContainer.appendChild(overallSection);
+
+    // Create individual feedback section
+    const individualSection = document.createElement('div');
+    individualSection.style.border = '1px solid #007bff';
+    individualSection.style.padding = '10px';
+    individualSection.style.marginBottom = '10px';
+    individualSection.style.fontSize = '14px';
+    individualSection.style.backgroundColor = '#cce5ff';
+    individualSection.style.borderRadius = '5px';
+
+    const individualTitle = document.createElement('h3');
+    individualTitle.innerText = individualTitleText;
+    individualTitle.style.fontWeight = 'bold';
+    individualSection.appendChild(individualTitle);
+
+    // Split individual feedback into sections based on new lines
+    const individualFeedbackParts = individualFeedback.split('\n\n');
+    individualFeedbackParts.forEach(part => {
+        const feedbackText = document.createElement('p');
+        feedbackText.innerText = part;
+        individualSection.appendChild(feedbackText);
+    });
+
+    feedbackContainer.appendChild(individualSection);
+}
+
+
+// Function to close the modal
+function closeModal() {
+    document.getElementById('pastConversationsModal').style.display = 'none';
+}
+
+// Function to view past conversations
+function viewPastConversations() {
+    const userId = '123'; // Replace with the actual user ID
+    const currentConversationId = sessionStorage.getItem('conversation_id'); // Get the current conversation ID
+    $.ajax({
+        url: '/get_past_conversations',
+        type: 'GET',
+        data: { user_id: userId },
+        success: function(response) {
+            // Exclude current conversation from the response
+            const pastConversations = response.filter(convo => convo.conversation_id !== currentConversationId);
+            displayPastConversations(pastConversations);
+            document.getElementById('myNav').style.width = "250px"; // Open the nav drawer
+        },
+        error: function(xhr, status, error) {
+            console.error('Error fetching past conversations:', error);
+        }
+    });
+}
+
+// Function to display past conversations
+function displayPastConversations(conversations) {
+    const navLinks = document.getElementById('navLinks');
+    navLinks.innerHTML = ''; // Clear existing links
+
+    conversations.slice(-3).forEach((convo, index) => {
+        const tabButton = document.createElement('a');
+        tabButton.href = "javascript:void(0)";
+        tabButton.innerText = convo.persona; // Show persona name
+        tabButton.onclick = function() {
+            showConversation(convo);
+        };
+        navLinks.appendChild(tabButton);
+    });
+}
+
+/// Function to show a specific conversation
+function showConversation(convo) {
+    closeNav(); // Close the navigation drawer
+
+    const pastConversationsModal = document.getElementById('pastConversationsModal');
+    const tabContent = document.getElementById('tab-content');
+
+    tabContent.innerHTML = ''; // Clear previous content
+
+    // Display messages
+    convo.messages.forEach(msg => {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message-wrapper'; // Use message-wrapper class
+        msgDiv.innerHTML = `
+            <div class="message-content ${msg.sender === 'user' ? 'agent-message' : 'customer-message'}">
+                <p>${msg.content}</p>
+                <span class="message-timestamp">${msg.timestamp}</span>
+            </div>`;
+        tabContent.appendChild(msgDiv);
+    });
+
+    // Parse the feedback data
+    const feedback = convo.feedback ? convo.feedback : 'No feedback available.';
+    let overallFeedback, individualFeedback, overallTitleText, individualTitleText;
+
+    if (/कुल फ़ीडबैक:/.test(feedback)) { // Check if feedback is in Hindi
+        overallFeedback = feedback.split('व्यक्तिगत फ़ीडबैक:')[0].trim();
+        individualFeedback = feedback.split('व्यक्तिगत फ़ीडबैक:')[1] ? feedback.split('व्यक्तिगत फ़ीडबैक:')[1].trim().split('\n').map(fb => fb.trim()) : ['कोई व्यक्तिगत फ़ीडबैक उपलब्ध नहीं है।'];
+
+        overallTitleText = 'कुल फ़ीडबैक:';
+        individualTitleText = 'व्यक्तिगत फ़ीडबैक:';
+    } else { // Default to English
+        overallFeedback = feedback.split('Individual Feedback:')[0].trim();
+        individualFeedback = feedback.split('Individual Feedback:')[1] ? feedback.split('Individual Feedback:')[1].trim().split('\n').map(fb => fb.trim()) : ['No individual feedback available.'];
+
+        overallTitleText = 'Overall Feedback:';
+        individualTitleText = 'Individual Feedback:';
+    }
+
+    // Display feedback
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.className = 'feedback-message';
+
+    feedbackDiv.innerHTML = `
+    <div class="feedback-section feedback-overall">
+        <h3>${overallTitleText}</h3>
+        <p>${overallFeedback}</p>
+    </div>
+    <div class="feedback-section feedback-individual">
+        <h3>${individualTitleText}</h3>
+        ${individualFeedback.map(fb => `<p>${fb.replace('Feedback:', '<br>Feedback:')}</p>`).join('')}
+    </div>`;
+
+    tabContent.appendChild(feedbackDiv);
+
+    pastConversationsModal.style.display = 'block';
+}
+
+
+
+
+// Open the navigation drawer
+function openNav() {
+    document.getElementById("myNav").style.width = "250px";
+    viewPastConversations(); // Load past conversations when the drawer is opened
+}
+
+// Close the navigation drawer
+function closeNav() {
+    document.getElementById("myNav").style.width = "0";
+}
+
+
+</script>
+
+    <nav>
+        <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
+        <a href="/recall"><img src="static/recall_icon.png" alt="Recall Icon">Recall</a>
+        <a href="refer.html"><img src="/static/refer_icon.png" alt="Refer Icon">Refer</a>
+    </nav>
+</body>
+</html>

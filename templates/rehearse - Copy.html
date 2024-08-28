@@ -333,7 +333,7 @@
 
         function selectPersona(persona, language) {
             var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
-            window.location.href = page + "?persona=" + encodeURIComponent(persona) + "&language=" + language;
+            window.location.href = page + "?persona=" + encodeURIComponent(persona);
         }
 
         function createCustomPersona(language) {
@@ -366,7 +366,7 @@
 					success: function(response) {
 						console.log("Custom persona set successfully:", response);
 						var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
-						window.location.href = page + "?persona=" + encodeURIComponent(customName) + "&language=" + language;
+						window.location.href = page + "?persona=" + encodeURIComponent(customName);
 					},
 					error: function(xhr, status, error) {
 						console.error("Error setting custom persona:", error);
