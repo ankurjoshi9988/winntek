@@ -165,6 +165,7 @@ def read_persona_details_from_csv(csv_file):
                 'Income Range': row['Income Range'],
                 'Location': row['Location'],
                 'Financial Goals': row['Financial Goals'],
+                'Family Member': row['Family Member'],
                 'Category': row['Categories']
             }
     return persona_data
@@ -180,13 +181,14 @@ def set_custom_persona():
 
     # Add the custom persona to the persona_data dictionary
     persona_data[name] = {
-        'Age': custom_persona['age'],
-        'Gender': custom_persona['gender'],
-        'Occupation': custom_persona['occupation'],
-        'Marital Status': custom_persona['maritalStatus'],
-        'Income Range': 'Unknown',  # You can set default values if needed
-        'Family Member': custom_persona['familyMembers'],
-        'Financial Goals': custom_persona['financialGoal'],
+        'Age': custom_persona.get('age', 'Unknown'),  # Provide default values if fields are missing
+        'Gender': custom_persona.get('gender', 'Unknown'),
+        'Occupation': custom_persona.get('occupation', 'Unknown'),
+        'Marital Status': custom_persona.get('maritalStatus', 'Unknown'),
+        'Income Range': 'Unknown',  # Default value as you mentioned
+        'Location': custom_persona.get('location', 'Unknown'),  # Assuming this might be missing
+        'Financial Goals': custom_persona.get('financialGoal', 'Unknown'),
+        'Family Member': custom_persona.get('familyMembers', 'Unknown'),
         'Category': 'Custom'  # Indicating that this is a custom persona
     }
 

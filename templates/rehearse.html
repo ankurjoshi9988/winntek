@@ -342,10 +342,11 @@
 			var customGender = $("#customGender").val().trim();  // Ensure this is correctly captured
 			var customOccupation = $("#customOccupation").val().trim();
 			var customMaritalStatus = $("#customMaritalStatus").val().trim();
-			var customFamilyMembers = $("#customFamilyMembers").val().trim();
 			var customFinancialGoal = $("#customFinancialGoal").val().trim();
+			var customFamilyMembers = $("#customFamilyMembers").val().trim();
+			
 
-			if (customName && customAge && customGender && customOccupation && customMaritalStatus && customFamilyMembers && customFinancialGoal) {
+			if (customName && customAge && customGender && customOccupation && customMaritalStatus && customFinancialGoal && customFamilyMembers) {
 				// Send custom persona details to the backend
 				$.ajax({
 					url: "/set_custom_persona",
@@ -360,8 +361,9 @@
 						gender: customGender,
 						occupation: customOccupation,
 						maritalStatus: customMaritalStatus,
-						familyMembers: customFamilyMembers,
-						financialGoal: customFinancialGoal
+						financialGoal: customFinancialGoal,
+						familyMembers: customFamilyMembers
+						
 					}),
 					success: function(response) {
 						console.log("Custom persona set successfully:", response);
