@@ -151,13 +151,14 @@ objection_handling = [
     for chat in conversation
 ]
 
-persona_data = {}
-def read_persona_details_from_csv(csv_file):
+persona_data1 = {}
+persona_data2 = {}
 
+def read_persona_details_from_csv(csv_file):
     with open(csv_file, 'r') as file:
         reader = csv.DictReader(file)
         for row in reader:
-            persona_data[row['Name']] = {
+            persona_data1[row['Name']] = {
                 'Age': row['Age'],
                 'Gender': row['Gender'],
                 'Occupation': row['Occupation'],
@@ -165,13 +166,11 @@ def read_persona_details_from_csv(csv_file):
                 'Income Range': row['Income Range'],
                 'Location': row['Location'],
                 'Financial Goals': row['Financial Goals'],
-                'Family Member': row['Family Member'],
                 'Category': row['Categories']
             }
-    return persona_data
+    return persona_data1
 
-persona_data = read_persona_details_from_csv('static/persona_details.csv')
-
+persona_data1 = read_persona_details_from_csv('static/persona_details.csv')
 
 @app.route('/set_custom_persona', methods=['POST'])
 @login_required
@@ -179,20 +178,20 @@ def set_custom_persona():
     custom_persona = request.json
     name = custom_persona['name']
 
-    # Add the custom persona to the persona_data dictionary
-    persona_data[name] = {
-        'Age': custom_persona.get('age', 'Unknown'),  # Provide default values if fields are missing
-        'Gender': custom_persona.get('gender', 'Unknown'),
-        'Occupation': custom_persona.get('occupation', 'Unknown'),
-        'Marital Status': custom_persona.get('maritalStatus', 'Unknown'),
-        'Income Range': 'Unknown',  # Default value as you mentioned
-        'Location': custom_persona.get('location', 'Unknown'),  # Assuming this might be missing
-        'Financial Goals': custom_persona.get('financialGoal', 'Unknown'),
-        'Family Member': custom_persona.get('familyMembers', 'Unknown'),
-        'Category': 'Custom'  # Indicating that this is a custom persona
+    # Add the custom persona to the persona_data2 dictionary
+    persona_data2[name] = {
+        'Age': custom_persona['age'],
+        'Gender': custom_persona['gender'],
+        'Occupation': custom_persona['occupation'],
+        'Marital Status': custom_persona['maritalStatus'],
+        'Income Range': 'Unknown',
+        'Family Member': custom_persona['familyMembers'],
+        'Financial Goals': custom_persona['financialGoal'],
+        'Category': 'Custom'
     }
 
     return jsonify({"status": "Custom persona set successfully"})
+
 
 
 @app.route('/load-personas')
@@ -371,10 +370,16 @@ async def start_conversation1(persona):
     #print(persona_data[persona])
     # Select the correct voice
 
-    # Safely retrieve the persona gender or provide a default
-    persona_gender = persona_data.get(persona, {}).get("Gender", "Male")  # Default to 'Neutral' if not found
-    print(f"Persona data for {persona}: {persona_data.get(persona)}")
-    print(f"Selected gender: {persona_gender}")
+    # Determine if the persona is predefined or custom
+    if persona in persona_data1:
+        persona_info = persona_data1[persona]
+    elif persona in persona_data2:
+        persona_info = persona_data2[persona]
+    else:
+        return jsonify({"error": "Persona not found"}), 404
+
+    persona_gender = persona_info["Gender"]
+    print(f"Persona info: {persona_info}")
 
     selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
     print(f"Selected voice: {selected_voice}")
@@ -393,7 +398,7 @@ async def start_conversation1(persona):
                 YOUR ROLE:
                 - ACT AS A POTENTIAL CUSTOMER.
                 - FOCUS ON YOUR ROLE AS THE CUSTOMER AND MAINTAIN A CONSISTENT PERSONA THROUGHOUT THE CONVERSATION.
-                - YOUR PROFILE: "{persona}" AND "{persona_data[persona]}".
+                - YOUR PROFILE: "{persona}" AND "{persona_info}".
                 - YOUR TONE: "{tone.upper()}".
                 - ANSWER ONLY TO WHAT HAS BEEN ASKED RELATED TO CONTEXT.
                 - YOU KNOW HINDI AND ENGLISH LANGUAGE VERY WELL. {language_instruction}
