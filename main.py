@@ -151,9 +151,9 @@ objection_handling = [
     for chat in conversation
 ]
 
-
+persona_data = {}
 def read_persona_details_from_csv(csv_file):
-    persona_data = {}
+
     with open(csv_file, 'r') as file:
         reader = csv.DictReader(file)
         for row in reader:
@@ -364,10 +364,16 @@ async def start_conversation1(persona):
 
     audio_file_name = str(uuid.uuid4()) + ".mp3"
 
-    persona_gender = persona_data[persona]["Gender"]
+    #persona_gender = persona_data[persona]["Gender"]
     # Select the voice based on persona's gender
-    print(persona_data[persona])
+    #print(persona_data[persona])
     # Select the correct voice
+
+    # Safely retrieve the persona gender or provide a default
+    persona_gender = persona_data.get(persona, {}).get("Gender", "Male")  # Default to 'Neutral' if not found
+    print(f"Persona data for {persona}: {persona_data.get(persona)}")
+    print(f"Selected gender: {persona_gender}")
+
     selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
     print(f"Selected voice: {selected_voice}")
     print("tone", tone)  # Debugging information

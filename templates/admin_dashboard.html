@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-	<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Admin Dashboard</title>
     <style>
         body {
@@ -27,6 +28,24 @@
         nav ul li a:hover {
             background-color: #ddd;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        h2 {
+            margin-top: 40px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -37,6 +56,7 @@
             <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
         </ul>
     </nav>
+    
     <h2>Users</h2>
     <table>
         <thead>
@@ -53,9 +73,48 @@
                 <td>{{ user.username }}</td>
                 <td>
                     <form action="{{ url_for('admin.admin_reset_password', user_id=user.id) }}" method="post">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <!-- CSRF Token -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="password" name="new_password" placeholder="New Password" required>
                         <button type="submit">Reset Password</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Manage Products</h2>
+    <form method="POST" action="{{ url_for('admin.manage_products') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+            <label for="name">Product Name:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        <div>
+            <label for="description">Product Description:</label>
+            <textarea id="description" name="description" required></textarea>
+        </div>
+        <button type="submit">Add Product</button>
+    </form>
+
+    <h3>Existing Products</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.name }}</td>
+                <td>{{ product.description }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('admin.delete_product', product_id=product.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit">Delete</button>
                     </form>
                 </td>
             </tr>

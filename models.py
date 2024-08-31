@@ -62,3 +62,8 @@ class Feedback(db.Model):
 
     conversation = db.relationship('Conversation', backref=db.backref('feedback', lazy=True))
 
+class Product(db.Model):
+    __tablename__ = 'products'  # Ensure this matches the table name in SQLite
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=False)
