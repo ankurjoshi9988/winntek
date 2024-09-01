@@ -171,6 +171,7 @@ def read_persona_details_from_csv(csv_file):
             }
     return persona_data1
 
+
 persona_data1 = read_persona_details_from_csv('static/persona_details.csv')
 
 @app.route('/set_custom_persona', methods=['POST'])
@@ -195,6 +196,8 @@ def set_custom_persona():
     return jsonify({"status": "Custom persona set successfully"})
 
 
+print("persona_data2",persona_data2)
+
 
 @app.route('/load-personas')
 @login_required
@@ -204,7 +207,7 @@ def load_personas():
         reader = csv.DictReader(file)
         personas = [row for row in reader]
     return jsonify({'personas': personas})
-    
+
 
 
 @app.route('/get_past_conversations', methods=['GET'])
@@ -344,17 +347,17 @@ def chat1():
 logging.basicConfig(level=logging.INFO)
 
 
-@app.route('/start_conversation/<persona>', methods=['POST'])
+@app.route('/start_conversation/<persona_name>', methods=['POST'])
 @login_required
-async def start_conversation1(persona):
-    print(f"Received request for persona: {persona}")
-    persona = persona.lower()  # Convert to lowercase
+async def start_conversation1(persona_name):
+    print(f"Received request for persona: {persona_name}")
+    persona_name = persona_name.lower()  # Convert to lowercase
     # Initialize or retrieve the conversation
     conversation_id = session.get('conversation_id')
     print(f"Initial conversation_id mahesh: {conversation_id}")
 
     if not conversation_id:
-        conversation_id = start_conversation(current_user.id, persona)
+        conversation_id = start_conversation(current_user.id, persona_name)
         session['conversation_id'] = conversation_id
         session.modified = True  # Mark the session as modified to ensure it's saved
     print(f"New conversation_id: {conversation_id}")
@@ -381,16 +384,16 @@ async def start_conversation1(persona):
     # Select the correct voice
 
     # Determine if the persona is predefined or custom
-    if persona in persona_data1:
-        persona_info = persona_data1[persona]
-    elif persona in persona_data2:
-        persona_info = persona_data2[persona]
+    if persona_name in persona_data1:
+        persona_info = persona_data1[persona_name]
+    elif persona_name in persona_data2:
+        persona_info = persona_data2[persona_name]
     else:
         return jsonify({"error": "Persona not found"}), 404
 
     persona_gender = persona_info["Gender"]
     print(f"Persona info: {persona_info}")
-    print(f"Persona Name: {persona}")
+    print(f"Persona Name: {persona_name}")
 
     selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
     print(f"Selected voice: {selected_voice}")
@@ -409,7 +412,7 @@ async def start_conversation1(persona):
                 YOUR ROLE:
                 - ACT AS A POTENTIAL CUSTOMER.
                 - FOCUS ON YOUR ROLE AS THE CUSTOMER AND MAINTAIN A CONSISTENT PERSONA THROUGHOUT THE CONVERSATION.
-                - YOUR PROFILE: "{persona}" AND "{persona_info}".
+                - YOUR PROFILE: "{persona_name}" AND "{persona_info}".
                 - YOUR TONE: "{tone.upper()}".
                 - ANSWER ONLY TO WHAT HAS BEEN ASKED RELATED TO CONTEXT.
                 - YOU KNOW HINDI AND ENGLISH LANGUAGE VERY WELL. {language_instruction}
