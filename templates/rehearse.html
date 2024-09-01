@@ -339,43 +339,53 @@
         function createCustomPersona(language) {
 			var customName = $("#customName").val().trim();
 			var customAge = $("#customAge").val().trim();
-			var customGender = $("#customGender").val().trim();  // Ensure this is correctly captured
+			var customGender = $("#customGender").val().trim();
 			var customOccupation = $("#customOccupation").val().trim();
 			var customMaritalStatus = $("#customMaritalStatus").val().trim();
 			var customFinancialGoal = $("#customFinancialGoal").val().trim();
 			var customFamilyMembers = $("#customFamilyMembers").val().trim();
-			
 
 			if (customName && customAge && customGender && customOccupation && customMaritalStatus && customFinancialGoal && customFamilyMembers) {
-				// Send custom persona details to the backend
-				$.ajax({
-					url: "/set_custom_persona",
-					type: "POST",
-					contentType: "application/json",
-					headers: {
-						"X-CSRFToken": csrfToken
-					},
-					data: JSON.stringify({
-						name: customName,
-						age: customAge,
-						gender: customGender,
-						occupation: customOccupation,
-						maritalStatus: customMaritalStatus,
-						financialGoal: customFinancialGoal,
-						familyMembers: customFamilyMembers
-						
-					}),
-					success: function(response) {
-						console.log("Custom persona set successfully:", response);
-						var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
-						window.location.href = page + "?persona=" + encodeURIComponent(customName) + "&language=" + language;
-					},
-					error: function(xhr, status, error) {
-						console.error("Error setting custom persona:", error);
-					}
-				});
+				// Call the new async function
+				setCustomPersonaAndStartConversation({
+					name: customName,
+					age: customAge,
+					gender: customGender,
+					occupation: customOccupation,
+					maritalStatus: customMaritalStatus,
+					financialGoal: customFinancialGoal,
+					familyMembers: customFamilyMembers
+				}, language);
 			} else {
 				alert("Please fill in all fields to create a custom persona.");
+			}
+		}
+
+		
+		async function setCustomPersonaAndStartConversation(customPersonaData, language) {
+			try {
+				const response = await $.ajax({
+					url: '/set_custom_persona',
+					type: 'POST',
+					contentType: 'application/json', // Ensure the correct content type is set
+					data: JSON.stringify(customPersonaData), // Convert the data to JSON string
+					headers: {
+						"X-CSRFToken": $('meta[name="csrf-token"]').attr('content') // Add CSRF token header
+					}
+				});
+
+				if (response.status === "Custom persona set successfully") {
+					// Verify persona details before starting conversation
+					const personaDetails = await $.get('/get_persona_details/' + encodeURIComponent(customPersonaData.name));
+					if (personaDetails) {
+						var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
+						window.location.href = page + "?persona=" + encodeURIComponent(customPersonaData.name) + "&language=" + language;
+					} else {
+						console.error("Custom persona not found after setting!");
+					}
+				}
+			} catch (error) {
+				console.error("Error setting custom persona or starting conversation:", error);
 			}
 		}
 		
