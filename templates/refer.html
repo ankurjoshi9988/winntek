@@ -157,14 +157,6 @@
         <div class="persona-list-wrapper">
 			<div class="heading">
 				<h2>Refer</h2>
-				<input type="text" id="searchName" placeholder="Search by Name..." style="padding: 8px; margin-left: 20px; width: 200px;">
-				<input type="text" id="searchOccupation" placeholder="Search by Occupation..." style="padding: 8px; margin-left: 20px; width: 200px;">
-				<input type="text" id="searchLocation" placeholder="Search by Location..." style="padding: 8px; margin-left: 20px; width: 200px;">
-				<input type="text" id="searchAge" placeholder="Search by Age..." style="padding: 8px; margin-left: 20px; width: 200px;">
-				<input type="text" id="searchMaritalStatus" placeholder="Search by Marital Status..." style="padding: 8px; margin-left: 20px; width: 200px;">
-				<input type="text" id="searchIncomeRange" placeholder="Search by Income Range..." style="padding: 8px; margin-left: 20px; width: 200px;">
-				<input type="text" id="searchFinancialGoals" placeholder="Search by Financial Goals..." style="padding: 8px; margin-left: 20px; width: 200px;">
-				<input type="text" id="searchCategories" placeholder="Search by Categories..." style="padding: 8px; margin-left: 20px; width: 200px;">
 			</div>
 		</div>
 
@@ -194,21 +186,6 @@
 					console.error("Error fetching data:", error);
 				}
 			});
-
-			// Dynamic filtering as the user types in the search fields
-			$('#searchName, #searchOccupation, #searchLocation, #searchAge, #searchMaritalStatus, #searchIncomeRange, #searchFinancialGoals, #searchCategories').on('input', function() {
-				var filteredPersonas = allPersonas.filter(function(persona) {
-					return persona.Name.toLowerCase().includes($('#searchName').val().toLowerCase()) &&
-						   persona.Occupation.toLowerCase().includes($('#searchOccupation').val().toLowerCase()) &&
-						   persona.Location.toLowerCase().includes($('#searchLocation').val().toLowerCase()) &&
-						   persona.Age.includes($('#searchAge').val()) &&
-						   persona["Marital Status"].toLowerCase().includes($('#searchMaritalStatus').val().toLowerCase()) &&
-						   persona["Income Range"].toLowerCase().includes($('#searchIncomeRange').val().toLowerCase()) &&
-						   persona["Financial Goals"].toLowerCase().includes($('#searchFinancialGoals').val().toLowerCase()) &&
-						   (persona.Categories ? persona.Categories.toLowerCase().includes($('#searchCategories').val().toLowerCase()) : false);
-				});
-				displayPersonas(filteredPersonas);
-			});
 		});
 
 		function displayPersonas(personas) {
@@ -222,27 +199,39 @@
 
 		function createPersonaCard(persona) {
 			var personaCard = $("<div></div>").addClass("persona-card");
-			var imageURL = "static/" + persona.Name.toLowerCase().replace(/\s+/g, '_') + ".jpg";
-			var defaultImageURL = "static/default_image.jpg";
+
+			// Ensure persona.Name exists and is not empty
+			var personaName = persona.Name ? persona.Name.toLowerCase().replace(/\s+/g, '_') : '';
+			
+			// Construct the image URL
+			var imageURL = personaName ? "static/" + personaName + ".jpg" : "static/default_image.jpg";
+			
+			// Log the values to the console
+			console.log("Persona Name: ", persona.Name);
+			console.log("Processed Persona Name: ", personaName);
+			console.log("Image URL: ", imageURL);
+
 			var pictureWrapper = $("<div></div>").addClass("picture-wrapper").appendTo(personaCard);
 			$("<img>").attr("src", imageURL).on("error", function() {
-				$(this).attr("src", defaultImageURL);
+				// Log an error if the image fails to load
+				console.log("Image not found, using default image for: ", personaName);
+				$(this).attr("src", "static/default_image.jpg");
 			}).addClass("persona-picture").appendTo(pictureWrapper);
 
 			var textContainer = $("<div></div>").addClass("text-container").appendTo(pictureWrapper);
-			$("<h2></h2>").text(persona.Name).css("color", "#007bff").appendTo(textContainer);
-			$("<p><strong>Occupation:</strong> " + persona.Occupation + "</p>").appendTo(textContainer);
-			$("<p><strong>Marital Status:</strong> " + persona["Marital Status"] + "</p>").appendTo(textContainer);
-			$("<p><strong>Age:</strong> " + persona.Age + "</p>").appendTo(textContainer);
-			$("<p><strong>Income:</strong> " + persona["Income Range"] + "</p>").addClass("persona-details").appendTo(textContainer);
-			$("<p><strong>Location:</strong> " + persona.Location + "</p>").addClass("persona-details").appendTo(textContainer);
-			$("<p><strong>Financial Goals:</strong> " + persona["Financial Goals"] + "</p>").addClass("persona-details").appendTo(textContainer);
+			$("<h2></h2>").text(persona.Name || 'Unknown').css("color", "#007bff").appendTo(textContainer);
+			$("<p><strong>Occupation:</strong> " + (persona.Occupation || 'N/A') + "</p>").appendTo(textContainer);
+			$("<p><strong>Marital Status:</strong> " + (persona["Marital Status"] || 'N/A') + "</p>").appendTo(textContainer);
+			$("<p><strong>Age:</strong> " + (persona.Age || 'N/A') + "</p>").appendTo(textContainer);
+			$("<p><strong>Income:</strong> " + (persona["Income Range"] || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
+			$("<p><strong>Location:</strong> " + (persona.Location || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
+			$("<p><strong>Financial Goals:</strong> " + (persona["Financial Goals"] || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
 
 			var categoriesText = Array.isArray(persona.Categories) ? persona.Categories.join(', ') : (persona.Categories || '').split(',').join(', ');
 			$("<p><strong>Category:</strong> " + categoriesText + "</p>").appendTo(textContainer);
 
 			var selectButton = $("<button></button>").addClass("select-button").text("Select").click(function() {
-				selectPersona(persona.Name);
+				selectPersona(persona.Name || 'Unknown');
 			}).appendTo(textContainer);
 			return personaCard;
 		}
@@ -251,8 +240,6 @@
 			var chatFilename = personaName.toLowerCase().replace(/\s+/g, '_') + ".json";
 			window.location.href = "SampleChat.html?persona=" + encodeURIComponent(personaName) + "&chatfile=" + encodeURIComponent(chatFilename);
 		}
-
-
     </script>
     <nav>
         <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>

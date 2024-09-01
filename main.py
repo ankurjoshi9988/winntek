@@ -155,8 +155,9 @@ persona_data1 = {}
 persona_data2 = {}
 
 def read_persona_details_from_csv(csv_file):
-    with open(csv_file, 'r') as file:
+    with open(csv_file, 'r', encoding='utf-8-sig') as file:
         reader = csv.DictReader(file)
+        print("CSV Headers:", reader.fieldnames)  # Add this line to debug
         for row in reader:
             persona_data1[row['Name']] = {
                 'Age': row['Age'],
@@ -177,6 +178,7 @@ persona_data1 = read_persona_details_from_csv('static/persona_details.csv')
 def set_custom_persona():
     custom_persona = request.json
     name = custom_persona['name']
+    print("name", name)
 
     # Add the custom persona to the persona_data2 dictionary
     persona_data2[name] = {
@@ -202,6 +204,8 @@ def load_personas():
         reader = csv.DictReader(file)
         personas = [row for row in reader]
     return jsonify({'personas': personas})
+    
+
 
 @app.route('/get_past_conversations', methods=['GET'])
 @login_required
@@ -380,6 +384,7 @@ async def start_conversation1(persona):
 
     persona_gender = persona_info["Gender"]
     print(f"Persona info: {persona_info}")
+    print(f"Persona Name: {persona}")
 
     selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
     print(f"Selected voice: {selected_voice}")
@@ -414,6 +419,7 @@ async def start_conversation1(persona):
     ]
 
     response = await asyncio.to_thread(llm.invoke, message2)
+    #print("response.usage_metadata: ",response.usage_metadata)
     customer_message = response.content
     print("Mahesh: ", customer_message)
 
