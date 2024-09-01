@@ -177,7 +177,7 @@ persona_data1 = read_persona_details_from_csv('static/persona_details.csv')
 @login_required
 def set_custom_persona():
     custom_persona = request.json
-    name = custom_persona['name']
+    name = custom_persona['name'].strip().lower()  # Convert to lowercase
     print("name", name)
 
     # Add the custom persona to the persona_data2 dictionary
@@ -261,6 +261,7 @@ async def save_to_json(filename, agent_message, customer_message, feedback):
 @login_required
 async def get_persona_details(persona):
     try:
+        persona = persona.lower()  # Convert to lowercase
         # Check in custom personas (persona_data2)
         if persona in persona_data2:
             return jsonify(persona_data2[persona])
@@ -346,6 +347,8 @@ logging.basicConfig(level=logging.INFO)
 @app.route('/start_conversation/<persona>', methods=['POST'])
 @login_required
 async def start_conversation1(persona):
+    print(f"Received request for persona: {persona}")
+    persona = persona.lower()  # Convert to lowercase
     # Initialize or retrieve the conversation
     conversation_id = session.get('conversation_id')
     print(f"Initial conversation_id mahesh: {conversation_id}")

@@ -333,11 +333,11 @@
 
         function selectPersona(persona, language) {
             var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
-            window.location.href = page + "?persona=" + encodeURIComponent(persona) + "&language=" + language;
+            window.location.href = page + "?persona=" + encodeURIComponent(persona.toLowerCase()) + "&language=" + language;
         }
 
         function createCustomPersona(language) {
-			var customName = $("#customName").val().trim();
+			var customName = $("#customName").val().trim().toLowerCase(); // Convert to lowercase
 			var customAge = $("#customAge").val().trim();
 			var customGender = $("#customGender").val().trim();
 			var customOccupation = $("#customOccupation").val().trim();
