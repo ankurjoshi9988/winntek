@@ -367,27 +367,37 @@
 				const response = await $.ajax({
 					url: '/set_custom_persona',
 					type: 'POST',
-					contentType: 'application/json', // Ensure the correct content type is set
-					data: JSON.stringify(customPersonaData), // Convert the data to JSON string
+					contentType: 'application/json',
+					data: JSON.stringify(customPersonaData),
 					headers: {
-						"X-CSRFToken": $('meta[name="csrf-token"]').attr('content') // Add CSRF token header
+						"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
 					}
 				});
 
 				if (response.status === "Custom persona set successfully") {
-					// Verify persona details before starting conversation
-					const personaDetails = await $.get('/get_persona_details/' + encodeURIComponent(customPersonaData.name));
+					// Add a small delay to ensure backend processing
+					await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+
+					// Verify persona details before navigating
+					const personaDetails = await $.get('/get_persona_details/' + encodeURIComponent(customPersonaData.name.toLowerCase()));
+					
 					if (personaDetails) {
 						var page = language === 'Hindi' ? 'Chat_hindi.html' : 'Chat_english.html';
-						window.location.href = page + "?persona=" + encodeURIComponent(customPersonaData.name) + "&language=" + language;
+						window.location.href = `${page}?persona=${encodeURIComponent(customPersonaData.name.toLowerCase())}&language=${language}`;
 					} else {
 						console.error("Custom persona not found after setting!");
+						alert("An error occurred while setting up your custom persona. Please try again.");
 					}
+				} else {
+					console.error("Failed to set custom persona:", response);
+					alert("Failed to create custom persona. Please try again.");
 				}
 			} catch (error) {
 				console.error("Error setting custom persona or starting conversation:", error);
+				alert("An unexpected error occurred. Please try again.");
 			}
 		}
+
 		
 		
 

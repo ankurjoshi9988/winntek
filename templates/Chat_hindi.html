@@ -613,6 +613,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const persona = urlParams.get('persona');
     document.getElementById('persona-name').innerText = persona;
+	console.log("persona set successfully:", persona);
 
     function getCurrentTimestamp() {
         const now = new Date();
