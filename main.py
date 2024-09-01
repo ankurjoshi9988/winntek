@@ -261,12 +261,15 @@ async def save_to_json(filename, agent_message, customer_message, feedback):
 @login_required
 async def get_persona_details(persona):
     try:
-        async with aiofiles.open('static/persona_details.csv', mode='r', newline='') as file:
-            reader = csv.DictReader(await file.readlines())
-            for row in reader:
-                if row['Name'] == persona:
-                    return jsonify(row)
+        # Check in custom personas (persona_data2)
+        if persona in persona_data2:
+            return jsonify(persona_data2[persona])
 
+        # Check in predefined personas (persona_data1)
+        if persona in persona_data1:
+            return jsonify(persona_data1[persona])
+
+        # If persona is not found in either, return 404
         return jsonify({"error": "Persona not found"}), 404
     except Exception as e:
         print("Error:", str(e))
