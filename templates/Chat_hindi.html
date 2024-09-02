@@ -526,7 +526,7 @@
 					error: function(xhr, status, error) {
 						console.error("Error:", error);
 					}
-				});
+				}, 500);  // 500ms delay to ensure session is cleared
 			},
 			error: function(xhr, status, error) {
 				console.error("Error clearing session:", error);
