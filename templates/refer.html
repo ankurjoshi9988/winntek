@@ -9,24 +9,27 @@
     <style>
         .flex-container {
             display: flex;
-            align-items: center;
+            align-items: flex-start; /* Align items to the top */
         }
-        .text-container {
-            align-items: top;
-            margin-left: 10px;
-            width: 100px;
-            white-space: nowrap;
-            font-size: 12px;
-            line-height: 0.8;
-        }
+		.text-container {
+			flex-grow: 1; /* Allow the text container to take up the remaining space */
+			margin-left: 10px;
+			font-size: 12px;
+			line-height: 1.2; /* Adjust line height for better alignment */
+			white-space: normal; /* Allow text to wrap */
+			word-wrap: break-word; /* Break long words if necessary */
+			overflow-wrap: break-word; /* Ensure that words are broken properly if they are too long */
+		}
+
         .picture-wrapper {
             display: flex;
             align-items: center;
         }
         .persona-picture {
-            width: 100px;
+            width: 50px;
             height: auto;
             margin-right: 10px;
+			align-self: flex-start; /* Ensure the image aligns with the top */
         }
         .text-wrapper {
             margin-left: 500px;
@@ -171,7 +174,7 @@
 			// Load personas from the server
 			$.ajax({
 				type: "GET",
-				url: "/load-personas",
+				url: "/load-refer-personas",  // Updated to match the backend route
 				dataType: "json",
 				success: function(response) {
 					console.log("Data loaded successfully:", response);
@@ -188,6 +191,7 @@
 			});
 		});
 
+
 		function displayPersonas(personas) {
 			var container = $("#personaListContainer");
 			container.empty(); // Clear existing personas
@@ -197,43 +201,46 @@
 		}
 
 
-		function createPersonaCard(persona) {
-			var personaCard = $("<div></div>").addClass("persona-card");
+function createPersonaCard(persona) {
+    var personaCard = $("<div></div>").addClass("persona-card");
 
-			// Ensure persona.Name exists and is not empty
-			var personaName = persona.Name ? persona.Name.toLowerCase().replace(/\s+/g, '_') : '';
-			
-			// Construct the image URL
-			var imageURL = personaName ? "static/" + personaName + ".jpg" : "static/default_image.jpg";
-			
-			// Log the values to the console
-			console.log("Persona Name: ", persona.Name);
-			console.log("Processed Persona Name: ", personaName);
-			console.log("Image URL: ", imageURL);
+    // Ensure persona.name exists and is not empty
+    var personaName = persona.name ? persona.name.toLowerCase().replace(/\s+/g, '_') : '';
+    
+    // Construct the image URL
+    var imageURL = personaName ? "static/" + personaName + ".jpg" : "static/default_image.jpg";
+    
+    // Log the values to the console
+    console.log("Persona Name: ", persona.name);
+    console.log("Processed Persona Name: ", personaName);
+    console.log("Image URL: ", imageURL);
 
-			var pictureWrapper = $("<div></div>").addClass("picture-wrapper").appendTo(personaCard);
-			$("<img>").attr("src", imageURL).on("error", function() {
-				// Log an error if the image fails to load
-				console.log("Image not found, using default image for: ", personaName);
-				$(this).attr("src", "static/default_image.jpg");
-			}).addClass("persona-picture").appendTo(pictureWrapper);
+    var pictureWrapper = $("<div></div>").addClass("picture-wrapper").appendTo(personaCard);
+    $("<img>").attr("src", imageURL).on("error", function() {
+        // Log an error if the image fails to load
+        console.log("Image not found, using default image for: ", personaName);
+        $(this).attr("src", "static/default_image.jpg");
+    }).addClass("persona-picture").appendTo(pictureWrapper);
 
-			var textContainer = $("<div></div>").addClass("text-container").appendTo(pictureWrapper);
-			$("<h2></h2>").text(persona.Name || 'Unknown').css("color", "#007bff").appendTo(textContainer);
-			$("<p><strong>Occupation:</strong> " + (persona.Occupation || 'N/A') + "</p>").appendTo(textContainer);
-			$("<p><strong>Marital Status:</strong> " + (persona["Marital Status"] || 'N/A') + "</p>").appendTo(textContainer);
-			$("<p><strong>Age:</strong> " + (persona.Age || 'N/A') + "</p>").appendTo(textContainer);
-			$("<p><strong>Income:</strong> " + (persona["Income Range"] || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
-			$("<p><strong>Financial Goals:</strong> " + (persona["Financial Goals"] || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
+    var textContainer = $("<div></div>").addClass("text-container").appendTo(pictureWrapper);
+    $("<h2></h2>").text(persona.name || 'Unknown').css("color", "#007bff").appendTo(textContainer);
+    $("<p><strong>Occupation:</strong> " + (persona.occupation || 'N/A') + "</p>").appendTo(textContainer);
+    $("<p><strong>Marital Status:</strong> " + (persona.marital_status || 'N/A') + "</p>").appendTo(textContainer);
+    $("<p><strong>Age:</strong> " + (persona.age || 'N/A') + "</p>").appendTo(textContainer);
+    $("<p><strong>Income:</strong> " + (persona.income_range || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
+    $("<p><strong>Dependent Family Members:</strong> " + (persona.dependent_family_members || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
+    $("<p><strong>Financial Goals:</strong> " + (persona.financial_goals || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
 
-			var categoriesText = Array.isArray(persona.Categories) ? persona.Categories.join(', ') : (persona.Categories || '').split(',').join(', ');
-			$("<p><strong>Category:</strong> " + categoriesText + "</p>").appendTo(textContainer);
+    var categoriesText = Array.isArray(persona.category) ? persona.category.join(', ') : (persona.category || '').split(',').join(', ');
+    $("<p><strong>Category:</strong> " + categoriesText + "</p>").appendTo(textContainer);
 
-			var selectButton = $("<button></button>").addClass("select-button").text("Select").click(function() {
-				selectPersona(persona.Name || 'Unknown');
-			}).appendTo(textContainer);
-			return personaCard;
-		}
+    var selectButton = $("<button></button>").addClass("select-button").text("Select").click(function() {
+        selectPersona(persona.name || 'Unknown');
+    }).appendTo(textContainer);
+    return personaCard;
+}
+
+
 
 		function selectPersona(personaName) {
 			var chatFilename = personaName.toLowerCase().replace(/\s+/g, '_') + ".json";

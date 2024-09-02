@@ -168,14 +168,34 @@ def read_persona_details_from_csv(csv_file):
                 'Occupation': row['Occupation'],
                 'Marital Status': row['Marital Status'],
                 'Income Range': row['Income Range'],
-                'Location': row['Location'],
                 'Financial Goals': row['Financial Goals'],
+                'Family Member':row['Family Member'],
                 'Category': row['Categories']
             }
     return persona_data1
 
 
 persona_data1 = read_persona_details_from_csv('static/persona_details.csv')
+
+@app.route('/load-refer-personas', methods=['GET'])
+@login_required
+def load_refer_personas():
+    personas = Persona.query.all()  # Fetch all personas from the database
+
+    # Ensure that each persona's data is formatted correctly
+    persona_list = [{
+        "name": persona.name,
+        "occupation": persona.occupation,
+        "marital_status": persona.marital_status,
+        "age": persona.age,
+        "income_range": persona.income_range,
+        "dependent_family_members": persona.dependent_family_members,  # Replace location with family members
+        "financial_goals": persona.financial_goals,
+        "category": persona.category
+    } for persona in personas]
+
+    return jsonify({"personas": persona_list})
+
 
 
 @app.route('/set_custom_persona', methods=['POST'])
