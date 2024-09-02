@@ -9,6 +9,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 	<meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
+		.notification {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			background-color: #28a745;
+			color: white;
+			padding: 15px 30px;
+			border-radius: 5px;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			z-index: 1000;
+			text-align: center;
+			font-size: 16px;
+		}
+
+
         .flex-container {
             display: flex;
             align-items: center;
@@ -112,7 +128,7 @@
         }
 
         .persona-card {
-            width: calc(100% - 10px);
+            width: calc(100% - 40px);
             margin-bottom: 20px;
             padding: 20px;
             background-color: #fff;
@@ -173,21 +189,59 @@
             transition: background-color 0.3s ease;
         }
         
-         .custom-persona {
-			padding: 20px;
-			background-color: #fff;
-			border-radius: 10px;
-			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-			margin-bottom: 20px;
-		}
+ .custom-persona {
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
 
-		.custom-persona input, .custom-persona select {
-			width: calc(100% - 20px); /* Use full width of the container */
-			padding: 10px;
-			margin: 10px 0;
-			border-radius: 5px;
-			border: 1px solid #ccc;
-		}
+.custom-persona input, .custom-persona select {
+    width: 100%; /* Ensure full width */
+    padding: 10px;
+    margin-bottom: 10px; /* Add space between inputs */
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box; /* Ensure padding doesn’t exceed width */
+}
+
+.custom-persona button {
+    width: 100%; /* Make button full width */
+    padding: 10px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.custom-persona button:hover {
+    background-color: #0056b3;
+}
+
+.custom-persona-container {
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    max-width: 600px; /* Adjust as necessary */
+    margin: 0 auto; /* Center the form */
+}
+
+.persona-list-container {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-height: calc(100vh - 400px); /* Adjust based on the height of your custom persona container */
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+
 
 		.button-container {
 			display: flex;
@@ -221,31 +275,30 @@
                 <button class="back-to-home-btn" onclick="navigateHome()">Home</button>
             </div>
         </div>
-		<div class="persona-list-container" id="personaListContainer">
-            <!-- Blank persona card for custom persona creation -->
-            <div class="persona-card custom-persona">
+		<!-- Container for Custom Persona Input Form -->
+		<div class="custom-persona-container">
+			<div class="persona-card custom-persona">
 				<h3>Create Custom Persona</h3>
-				<input type="text" id="customName" placeholder="Name">
-				<input type="number" id="customAge" placeholder="Age">
-				<select id="customGender">
+				<input type="text" id="customName" placeholder="Name" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+				<input type="number" id="customAge" placeholder="Age" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+				<select id="customGender" style="width: 100%; padding: 10px; margin-bottom: 10px;">
 					<option value="">Gender</option>
 					<option value="Male">Male</option>
 					<option value="Female">Female</option>
 				</select>
-				<input type="text" id="customOccupation" placeholder="Occupation">
-				<input type="text" id="customMaritalStatus" placeholder="Marital Status">
-				<input type="text" id="customFamilyMembers" placeholder="Family Members">
-				<input type="text" id="customFinancialGoal" placeholder="Financial Goal">
-
-				<!-- Button container -->
-				
-					<button class="select-button" onclick="createCustomPersona('Hindi')">Hindi</button>
-					<button class="select-button" onclick="createCustomPersona('English')">English</button>
-				
+				<input type="text" id="customOccupation" placeholder="Occupation" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+				<input type="text" id="customMaritalStatus" placeholder="Marital Status" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+				<input type="text" id="customFamilyMembers" placeholder="Dependent Family Members" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+				<input type="text" id="customFinancialGoal" placeholder="Financial Goal" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+				<button onclick="addCustomPersona()" style="width: 100%; padding: 10px; background-color: #007bff; color: #fff; border: none; border-radius: 5px;">Add Persona</button>
 			</div>
+		</div>
 
-            <!-- Persona cards will be dynamically generated here -->
-        </div>
+		<!-- Container for Listed Personas -->
+		<div class="persona-list-container" id="personaListContainer">
+			<!-- Persona cards will be dynamically generated here -->
+		</div>
+	</div>
     </div>
     
     <script>
@@ -254,6 +307,10 @@
 				"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
 			}
 		});
+		$(document).ready(function() {
+			loadPersonas();
+		});
+
 		var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         $(document).ready(function() {
             // Fetch persona data from CSV file
@@ -311,13 +368,13 @@
                 $("<p><strong>Location:</strong> " + persona.Location + "</p>").addClass("persona-details").appendTo(detailsWrapper);
                 $("<p><strong>Financial Goals:</strong> " + persona["Financial Goals"] + "</p>").addClass("persona-details").appendTo(detailsWrapper);
                 
-                var hindiButton = $("<button></button>").addClass("select-button").text("Hindi");
+                var hindiButton = $("<button></button>").addClass("select-button").text("Hindi2");
                 hindiButton.click(function() {
                     selectPersona(persona.Name, 'Hindi');
                 });
                 hindiButton.appendTo(detailsWrapper);
 
-                var englishButton = $("<button></button>").addClass("select-button").text("English");
+                var englishButton = $("<button></button>").addClass("select-button").text("English2");
                 englishButton.click(function() {
                     selectPersona(persona.Name, 'English');
                 });
@@ -336,33 +393,48 @@
             window.location.href = page + "?persona=" + encodeURIComponent(persona.toLowerCase()) + "&language=" + language;
         }
 
-        function createCustomPersona(language) {
-			var customName = $("#customName").val().trim().toLowerCase(); // Convert to lowercase
-			var customAge = $("#customAge").val().trim();
-			var customGender = $("#customGender").val().trim();
-			var customOccupation = $("#customOccupation").val().trim();
-			var customMaritalStatus = $("#customMaritalStatus").val().trim();
-			var customFinancialGoal = $("#customFinancialGoal").val().trim();
-			var customFamilyMembers = $("#customFamilyMembers").val().trim();
+        function createPersonaCard(persona, imageURL) {
+			var personaCard = $("<div></div>").addClass("persona-card");
+			var pictureWrapper = $("<div></div>").addClass("picture-wrapper").appendTo(personaCard);
+			var picturePlaceholder = $("<div></div>").addClass("persona-picture").appendTo(pictureWrapper);
+			var detailsWrapper = $("<div></div>").addClass("persona-details-wrapper").appendTo(personaCard);
+			var textWrapper = $("<div></div>").addClass("text-wrapper").appendTo(pictureWrapper);
 
-			if (customName && customAge && customGender && customOccupation && customMaritalStatus && customFinancialGoal && customFamilyMembers) {
-				// Call the new async function
-				setCustomPersonaAndStartConversation({
-					name: customName,
-					age: customAge,
-					gender: customGender,
-					occupation: customOccupation,
-					maritalStatus: customMaritalStatus,
-					financialGoal: customFinancialGoal,
-					familyMembers: customFamilyMembers
-				}, language);
-			} else {
-				alert("Please fill in all fields to create a custom persona.");
-			}
+			var flexContainer = $("<div></div>").addClass("flex-container").appendTo(picturePlaceholder);
+			$("<img>").attr("src", imageURL).addClass("persona-picture").appendTo(flexContainer);
+			var textContainer = $("<div></div>").addClass("text-container").appendTo(flexContainer);
+			$("<h2></h2>").text(persona.name).appendTo(textContainer);
+			$("<p><strong>Occupation:</strong> " + persona.occupation + "</p>").appendTo(textContainer);
+			$("<p><strong>Marital Status:</strong> " + persona.marital_status + "</p>").appendTo(textContainer);
+			$("<p><strong>Age:</strong> " + persona.age + "</p>").appendTo(textContainer);
+			$("<p><strong>Dependent Family Members:</strong> " + persona.dependent_family_members + "</p>").addClass("persona-details").appendTo(detailsWrapper);
+			$("<p><strong>Financial Goals:</strong> " + persona.financial_goals + "</p>").addClass("persona-details").appendTo(detailsWrapper);
+
+			// Adding Hindi and English buttons
+			
+			var hindiButton = $("<button></button>").addClass("select-button").text("Hindi");
+			hindiButton.click(function() {
+				selectPersona(persona.name, 'Hindi');
+			});
+			hindiButton.appendTo(detailsWrapper);
+
+			var englishButton = $("<button></button>").addClass("select-button").text("English");
+			englishButton.click(function() {
+				selectPersona(persona.name, 'English');
+			});
+			englishButton.appendTo(detailsWrapper);
+			
+				
+
+			return personaCard;
 		}
+
+
+
 
 		
 		async function setCustomPersonaAndStartConversation(customPersonaData, language) {
+			
 			try {
 				const response = await $.ajax({
 					url: '/set_custom_persona',
@@ -398,6 +470,120 @@
 				alert("An unexpected error occurred. Please try again.");
 			}
 		}
+		
+function capitalizeWords(str) {
+    return str.replace(/\b\w/g, function(char) {
+        return char.toUpperCase();
+    });
+}
+
+function addCustomPersona() {
+    var customName = $("#customName").val().trim().toLowerCase();
+    var customAge = $("#customAge").val().trim();
+    var customGender = $("#customGender").val().trim();
+    var customOccupation = $("#customOccupation").val().trim();
+    var customMaritalStatus = $("#customMaritalStatus").val().trim();
+    var customFamilyMembers = $("#customFamilyMembers").val().trim();
+    var customFinancialGoal = $("#customFinancialGoal").val().trim();
+
+    if (customName && customAge && customGender && customOccupation && customMaritalStatus && customFamilyMembers && customFinancialGoal) {
+        $.ajax({
+            url: '/set_custom_persona',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: customName,
+                age: customAge,
+                gender: customGender,
+                occupation: customOccupation,
+                maritalStatus: customMaritalStatus,
+                financialGoal: customFinancialGoal,
+                familyMembers: customFamilyMembers
+            }),
+            success: function(response) {
+                if (response.status === "Custom persona set successfully") {
+                    customName = capitalizeWords(customName);  // Capitalize name before displaying
+                    loadPersonas();  // Reload the personas list to reflect the new persona on top
+                    showNotification(customName + " has been added to the list.");  // Show notification with capitalized name
+                } else {
+                    alert("Failed to add custom persona. Please try again.");
+                }
+            },
+            error: function(xhr, status, error) {
+                if (xhr.status === 409) {
+                    alert("A persona with this name already exists. Please choose a different name.");
+                } else {
+                    console.error("Error adding custom persona:", error);
+                    alert("An error occurred while adding the custom persona. Please try again.");
+                }
+            }
+        });
+    } else {
+        alert("Please fill in all fields to create a custom persona.");
+    }
+}
+
+// Optional custom notification function
+function showNotification(message) {
+    var notification = $("<div></div>").text(message).addClass("notification");
+    $("body").append(notification);
+    setTimeout(function() {
+        notification.fadeOut(function() {
+            $(this).remove();
+        });
+    }, 2000);  // Notification disappears after 3 seconds
+}
+
+function loadPersonas() {
+    $.ajax({
+        url: '/load-personas',
+        type: 'GET',
+        success: function(response) {
+            var personaListContainer = $("#personaListContainer");
+            personaListContainer.empty();  // Clear existing personas
+
+            response.personas.forEach(function(persona) {
+				var imageURL = persona.image_url || "static/default_image.jpg";
+				var personaCard = createPersonaCard(persona, imageURL);
+				personaListContainer.prepend(personaCard); // Adding the persona at the top of the list
+			});
+
+        },
+        error: function(xhr, status, error) {
+            console.error("Error loading personas:", error);
+            alert("An error occurred while loading the personas.");
+        }
+    });
+}
+
+
+
+
+	
+	async function setCustomPersonaAndAddToList(customPersonaData) {
+		try {
+			const response = await $.ajax({
+				url: '/set_custom_persona',
+				type: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify(customPersonaData),
+				headers: {
+					"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+				}
+			});
+
+			if (response.status === "Custom persona set successfully") {
+				customName = capitalizeWords(customName);  // Capitalize name before displaying
+				// Refresh the persona list or add the new persona to the list
+				loadPersonas();  // Assuming you have a function that reloads the personas list
+			} else {
+				alert(response.status); // Handle any error messages
+			}
+		} catch (error) {
+			console.error("Error setting custom persona:", error);
+			alert("An error occurred while adding the custom persona. Please try again.");
+		}
+	}
 
 		
 		

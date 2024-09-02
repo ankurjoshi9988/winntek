@@ -11,6 +11,9 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     credits = db.Column(db.Integer, default=10)  # Default 10 credits
 
+
+
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
@@ -67,3 +70,17 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
+
+class Persona(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(10), nullable=False)
+    occupation = db.Column(db.String(100), nullable=False)
+    marital_status = db.Column(db.String(100), nullable=False)
+    income_range = db.Column(db.String(100), nullable=True)
+    dependent_family_members = db.Column(db.String(100), nullable=True)  # Replace location with dependent_family_members
+    financial_goals = db.Column(db.String(500), nullable=False)
+    category = db.Column(db.String(50), nullable=False)  # Predefined or Custom
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user = db.relationship('User', backref='personas', lazy=True)

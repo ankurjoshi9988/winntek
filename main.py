@@ -29,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from auth import auth_bp, init_auth
 from admin import admin_bp
 from authlib.integrations.flask_client import OAuth
-from models import User, Conversation, Message, Feedback
+from models import User, Conversation, Message, Feedback, Persona
 from extensions import login_manager, csrf, mail, oauth, db
 
 
@@ -182,22 +182,31 @@ persona_data1 = read_persona_details_from_csv('static/persona_details.csv')
 @login_required
 def set_custom_persona():
     custom_persona = request.json
-    name = custom_persona['name'].strip().lower()  # Convert to lowercase
-    print("name", name)
+    name = custom_persona['name'].strip().lower()  # Corrected method name
 
-    # Add the custom persona to the persona_data2 dictionary
-    persona_data2[name] = {
-        'Age': custom_persona['age'],
-        'Gender': custom_persona['gender'],
-        'Occupation': custom_persona['occupation'],
-        'Marital Status': custom_persona['maritalStatus'],
-        'Income Range': 'Unknown',
-        'Family Member': custom_persona['familyMembers'],
-        'Financial Goals': custom_persona['financialGoal'],
-        'Category': 'Custom'
-    }
+    # Check if a persona with the same name already exists for the user
+    existing_persona = Persona.query.filter_by(name=name, user_id=current_user.id).first()
+    if (existing_persona):
+        return jsonify({"status": "Persona with this name already exists"}), 409
+
+    # Create and save the custom persona in the database
+    new_persona = Persona(
+        name=name,
+        age=custom_persona['age'],
+        gender=custom_persona['gender'],
+        occupation=custom_persona['occupation'],
+        marital_status=custom_persona['maritalStatus'],
+        income_range='Unknown',
+        dependent_family_members=custom_persona['familyMembers'],  # Ensure this matches the model
+        financial_goals=custom_persona['financialGoal'],
+        category='Custom',
+        user_id=current_user.id
+    )
+    db.session.add(new_persona)
+    db.session.commit()
 
     return jsonify({"status": "Custom persona set successfully"})
+
 
 
 print("persona_data2",persona_data2)
@@ -206,12 +215,32 @@ print("persona_data2",persona_data2)
 @app.route('/load-personas')
 @login_required
 def load_personas():
-    personas = []
-    with open('static/persona_details.csv', mode='r') as file:
-        reader = csv.DictReader(file)
-        personas = [row for row in reader]
-    return jsonify({'personas': personas})
+    try:
+        # Load predefined personas
+        predefined_personas = Persona.query.filter_by(user_id=None).all()
+        # Load custom personas created by the current user
+        custom_personas = Persona.query.filter_by(user_id=current_user.id).all()
 
+        personas = predefined_personas + custom_personas
+
+        persona_list = [{
+            "id": persona.id,
+            "name": persona.name,
+            "age": persona.age,
+            "gender": persona.gender,
+            "occupation": persona.occupation,
+            "marital_status": persona.marital_status,
+            "income_range": persona.income_range,
+            "dependent_family_members": persona.dependent_family_members,
+            "financial_goals": persona.financial_goals,
+            "category": persona.category
+        } for persona in personas]
+
+        return jsonify({"personas": persona_list})
+
+    except Exception as e:
+        app.logger.error(f"Error loading personas: {e}")
+        return jsonify({"error": "An error occurred while loading the personas"}), 500
 
 
 @app.route('/get_past_conversations', methods=['GET'])
@@ -266,22 +295,29 @@ async def save_to_json(filename, agent_message, customer_message, feedback):
 
 @app.route('/get_persona_details/<persona>')
 @login_required
-async def get_persona_details(persona):
+def get_persona_details(persona):
     try:
-        persona = persona.lower()  # Convert to lowercase
-        # Check in custom personas (persona_data2)
-        if persona in persona_data2:
-            return jsonify(persona_data2[persona])
+        persona = persona.lower()
+        persona = Persona.query.filter_by(name=persona).first()
 
-        # Check in predefined personas (persona_data1)
-        if persona in persona_data1:
-            return jsonify(persona_data1[persona])
-
-        # If persona is not found in either, return 404
-        return jsonify({"error": "Persona not found"}), 404
+        if persona and (persona.user_id is None or persona.user_id == current_user.id):
+            return jsonify({
+                'name': persona.name,
+                'age': persona.age,
+                'gender': persona.gender,
+                'occupation': persona.occupation,
+                'marital_status': persona.marital_status,
+                'income_range': persona.income_range,
+                'dependent_family_members': persona.dependent_family_members,  # Update here
+                'financial_goals': persona.financial_goals,
+                'category': persona.category
+            })
+        else:
+            return jsonify({"error": "Persona not found"}), 404
     except Exception as e:
         print("Error:", str(e))
         return jsonify({"error": "Internal server error"}), 500
+
 
 
 @app.route('/')
@@ -375,29 +411,24 @@ async def start_conversation1(persona_name):
 
     audio_file_name = str(uuid.uuid4()) + ".mp3"
 
-    # Determine if the persona is predefined or custom
-    if persona_name in persona_data1:
-        persona_info = persona_data1[persona_name]
-    elif persona_name in persona_data2:
-        persona_info = persona_data2[persona_name]
-    else:
-        # If persona is not found, create it dynamically from the POST data (assuming it’s custom)
-        custom_persona_data = request.json.get('custom_persona_data')
-        if custom_persona_data:
-            persona_data2[persona_name] = {
-                'Age': custom_persona_data['age'],
-                'Gender': custom_persona_data['gender'],
-                'Occupation': custom_persona_data['occupation'],
-                'Marital Status': custom_persona_data['maritalStatus'],
-                'Income Range': 'Unknown',
-                'Family Member': custom_persona_data['familyMembers'],
-                'Financial Goals': custom_persona_data['financialGoal'],
-                'Category': 'Custom'
-            }
-            persona_info = persona_data2[persona_name]
-            print(f"Custom persona created: {persona_info}")
-        else:
-            return jsonify({"error": "Persona not found and no custom persona data provided"}), 404
+    # Fetch the persona from the database based on the persona_name and current user's ID
+    persona = Persona.query.filter_by(name=persona_name, user_id=current_user.id).first()
+    if not persona:
+        return jsonify({"error": "Persona not found"}), 404  # Return 404 if persona is not found
+
+    # Extract relevant persona details
+    persona_info = {
+        "Name": persona.name,
+        "Age": persona.age,
+        "Gender": persona.gender,
+        "Occupation": persona.occupation,
+        "Marital Status": persona.marital_status,
+        "Dependent Family Members": persona.dependent_family_members,
+        "Financial Goals": persona.financial_goals,
+        "Category": persona.category
+    }
+    print(f"Persona info: {persona_info}")
+
 
     persona_gender = persona_info["Gender"]
     print(f"Persona info: {persona_info}")

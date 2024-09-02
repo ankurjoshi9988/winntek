@@ -224,7 +224,6 @@
 			$("<p><strong>Marital Status:</strong> " + (persona["Marital Status"] || 'N/A') + "</p>").appendTo(textContainer);
 			$("<p><strong>Age:</strong> " + (persona.Age || 'N/A') + "</p>").appendTo(textContainer);
 			$("<p><strong>Income:</strong> " + (persona["Income Range"] || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
-			$("<p><strong>Location:</strong> " + (persona.Location || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
 			$("<p><strong>Financial Goals:</strong> " + (persona["Financial Goals"] || 'N/A') + "</p>").addClass("persona-details").appendTo(textContainer);
 
 			var categoriesText = Array.isArray(persona.Categories) ? persona.Categories.join(', ') : (persona.Categories || '').split(',').join(', ');
