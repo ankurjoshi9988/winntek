@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from datetime import timedelta
 from conversation_service import start_conversation, add_message, close_conversation, get_past_conversations
 import re
+
 from gtts import gTTS
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -159,7 +160,9 @@ def read_persona_details_from_csv(csv_file):
         reader = csv.DictReader(file)
         print("CSV Headers:", reader.fieldnames)  # Add this line to debug
         for row in reader:
-            persona_data1[row['Name']] = {
+            # Convert the persona name to lowercase for consistent lookups
+            persona_name = row['Name'].strip().lower()
+            persona_data1[persona_name] = {
                 'Age': row['Age'],
                 'Gender': row['Gender'],
                 'Occupation': row['Occupation'],
@@ -173,6 +176,7 @@ def read_persona_details_from_csv(csv_file):
 
 
 persona_data1 = read_persona_details_from_csv('static/persona_details.csv')
+
 
 @app.route('/set_custom_persona', methods=['POST'])
 @login_required
@@ -351,7 +355,8 @@ logging.basicConfig(level=logging.INFO)
 @login_required
 async def start_conversation1(persona_name):
     print(f"Received request for persona: {persona_name}")
-    persona_name = persona_name.lower()  # Convert to lowercase
+
+    persona_name = persona_name.lower()  # Decode and convert to lowercase
     # Initialize or retrieve the conversation
     conversation_id = session.get('conversation_id')
     print(f"Initial conversation_id mahesh: {conversation_id}")
