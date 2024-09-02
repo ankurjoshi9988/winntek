@@ -377,7 +377,7 @@
 				if (response.status === "Custom persona set successfully") {
 					
 					// Increase delay to 2000ms (2 seconds) to see if this resolves the issue
-					await new Promise(resolve => setTimeout(resolve, 2000)); // 2000ms delay
+					await new Promise(resolve => setTimeout(resolve, 1000)); // 2000ms delay
 
 					// Verify persona details before navigating
 					const personaDetails = await $.get('/get_persona_details/' + encodeURIComponent(customPersonaData.name.toLowerCase()));

@@ -356,10 +356,10 @@ logging.basicConfig(level=logging.INFO)
 async def start_conversation1(persona_name):
     print(f"Received request for persona: {persona_name}")
 
-    persona_name = persona_name.lower()  # Decode and convert to lowercase
+    persona_name = persona_name.lower()  # Convert to lowercase for consistency
     # Initialize or retrieve the conversation
     conversation_id = session.get('conversation_id')
-    print(f"Initial conversation_id mahesh: {conversation_id}")
+    print(f"Initial conversation_id: {conversation_id}")
 
     if not conversation_id:
         conversation_id = start_conversation(current_user.id, persona_name)
@@ -368,25 +368,12 @@ async def start_conversation1(persona_name):
     print(f"New conversation_id: {conversation_id}")
 
     agent_message = request.json.get('message')
-    # Check if tone is provided in the request and update the session
-    tone = request.json.get('tone')
-    language = request.json.get('language', 'Hindi')  # Default language is Hindi
-    if tone:
-        session['tone'] = tone
-    else:
-        tone = session.get('tone', 'polite')  # Default tone is polite if not set
+    tone = request.json.get('tone', session.get('tone', 'polite'))  # Default tone to 'polite' if not provided
+    language = request.json.get('language', session.get('language', 'Hindi'))  # Default language to 'Hindi' if not provided
+    session['language'] = language
     print(f"Received tone: {tone}")
 
-    # Retrieve language from the session
-    language = session.get('language', 'Hindi')  # Default language is Hindi if not set
-    print(f"Language in start_conversation1: {language}")
-
     audio_file_name = str(uuid.uuid4()) + ".mp3"
-
-    #persona_gender = persona_data[persona]["Gender"]
-    # Select the voice based on persona's gender
-    #print(persona_data[persona])
-    # Select the correct voice
 
     # Determine if the persona is predefined or custom
     if persona_name in persona_data1:
@@ -394,7 +381,23 @@ async def start_conversation1(persona_name):
     elif persona_name in persona_data2:
         persona_info = persona_data2[persona_name]
     else:
-        return jsonify({"error": "Persona not found"}), 404
+        # If persona is not found, create it dynamically from the POST data (assuming it’s custom)
+        custom_persona_data = request.json.get('custom_persona_data')
+        if custom_persona_data:
+            persona_data2[persona_name] = {
+                'Age': custom_persona_data['age'],
+                'Gender': custom_persona_data['gender'],
+                'Occupation': custom_persona_data['occupation'],
+                'Marital Status': custom_persona_data['maritalStatus'],
+                'Income Range': 'Unknown',
+                'Family Member': custom_persona_data['familyMembers'],
+                'Financial Goals': custom_persona_data['financialGoal'],
+                'Category': 'Custom'
+            }
+            persona_info = persona_data2[persona_name]
+            print(f"Custom persona created: {persona_info}")
+        else:
+            return jsonify({"error": "Persona not found and no custom persona data provided"}), 404
 
     persona_gender = persona_info["Gender"]
     print(f"Persona info: {persona_info}")
@@ -402,12 +405,9 @@ async def start_conversation1(persona_name):
 
     selected_voice = VOICE_MAPPING.get(persona_gender, "hi-IN-SwaraNeural")
     print(f"Selected voice: {selected_voice}")
-    print("tone", tone)  # Debugging information
+    print("Tone:", tone)
 
-    if language == 'Hindi':
-        language_instruction = "YOU HAVE A CONVERSATION IN HINDI."
-    else:
-        language_instruction = "YOU HAVE A CONVERSATION IN ENGLISH."
+    language_instruction = "YOU HAVE A CONVERSATION IN HINDI." if language == 'Hindi' else "YOU HAVE A CONVERSATION IN ENGLISH."
 
     message2 = [
         SystemMessage(
@@ -420,7 +420,7 @@ async def start_conversation1(persona_name):
                 - YOUR PROFILE: "{persona_name}" AND "{persona_info}".
                 - YOUR TONE: "{tone.upper()}".
                 - ANSWER ONLY TO WHAT HAS BEEN ASKED RELATED TO CONTEXT.
-                - YOU KNOW HINDI AND ENGLISH LANGUAGE VERY WELL. {language_instruction}
+                - YOU KNOW HINDI AND ENGLISH VERY WELL. {language_instruction}
                 - REMEMBER, TAKE A DEEP BREATH AND THINK TWICE BEFORE RESPONDING.
                 - KEEP THE CONTEXT OF THE CURRENT CONVERSATION IN MIND AND TAKE IT TOWARDS A POSITIVE END STEP BY STEP BY RESPONDING TO EACH QUERY ONE BY ONE.
                 - AVOID RESPONDING AS THE AGENT OR PRODUCING A COMPLETE SCRIPT.
@@ -433,9 +433,8 @@ async def start_conversation1(persona_name):
     ]
 
     response = await asyncio.to_thread(llm.invoke, message2)
-    #print("response.usage_metadata: ",response.usage_metadata)
     customer_message = response.content
-    print("Mahesh: ", customer_message)
+    print("Customer response: ", customer_message)
 
     # Azure Text-to-Speech implementation
     speech_config = speechsdk.SpeechConfig(subscription=azure_subscription_key, region=azure_region)
@@ -444,9 +443,7 @@ async def start_conversation1(persona_name):
     audio_config = speechsdk.audio.AudioOutputConfig(filename=f"static/{audio_file_name}")
     speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
 
-    # Perform TTS in a separate thread and get the result
     result = await asyncio.to_thread(speech_synthesizer.speak_text_async(customer_message).get)
-    # Check result
     if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
         print(f"Speech synthesized for text [{customer_message}]")
     elif result.reason == speechsdk.ResultReason.Canceled:
