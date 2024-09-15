@@ -233,21 +233,20 @@ async def validate_answer():
         correct_answer = current_qa_pair['answer']
         print("correct_answer: ", correct_answer)
         # Modify the prompt to explicitly ask for answer evaluation
-        if session['language'] == 'Hindi':
+        if session['language'] == "Hindi":
             prompt = f"""
-            आप एक कोच हैं और आपको एक छात्र का उत्तर मूल्यांकन करना है। कोलोक्विल हिंदी का इस्तेमाल करें। जहां अंग्रेजी शब्द बोलना पड़े वहां बोलो।
-            user का उत्तर: "{user_answer}"
-            सही उत्तर: "{correct_answer}"
-            क्या user का उत्तर सही है? उत्तर के समानता और संदर्भ को ध्यान में रखते हुए एक कोच की तरह उत्तर दें। कृपया 70% semantic similarity (अर्थ की समानता) के आधार पर सही, अधूरा, या गलत उत्तर दें। अगर उत्तर सही है लेकिन थोड़ा अलग है, तो उसे सही मानें और क्यों यह उत्तर सही, अधूरा या गलत है, इसका संक्षिप्त विवरण दें। बातचीत में समानता के % उल्लेख न करें।
-            """
-
+                    आप एक कोच हैं जो छात्र के उत्तर का मूल्यांकन कर रहे हैं। छात्र का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}".
+                    छात्र के उत्तर की तुलना सही उत्तर से करें और यह निर्धारित करें कि यह सही है या गलत।
+                    यदि सही है, तो छात्र की प्रशंसा करें और उसे प्रोत्साहन दें।
+                    यदि गलत है, तो सही उत्तर को संक्षेप में समझाएं और छात्र को आगे बढ़ने के लिए प्रेरित करें।
+                    """
         else:
             prompt = f"""
-            You are a coach evaluating a student's response.
-            user answer: "{user_answer}"
-            Correct answer: "{correct_answer}"
-            Is the student's answer correct? Please evaluate based on semantic similarity and context. Provide either 'Correct', 'Incomplete', or 'Incorrect' as your evaluation. If the user's answer is semantically correct but phrased differently, consider it correct and provide a brief explanation of why the answer is correct, incomplete, or incorrect. do not mention % of similarity in conversation.
-            """
+                    You are a coach evaluating a student's response. The student's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
+                    Compare the student's answer with the correct answer and determine if it's correct or incorrect.
+                    If correct, praise the student and provide motivational feedback.
+                    If incorrect, briefly explain the correct answer and motivate the student to continue.
+                    """
 
         # AI LLM call to generate a human-like conversational response
         response = await asyncio.to_thread(llm.invoke, prompt)
