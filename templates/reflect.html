@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reflect</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        body, html {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .heading {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .product-select, .language-select {
+            margin-bottom: 20px;
+        }
+        .conversation-box {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .message.coach {
+            text-align: left;
+            color: green;
+        }
+        .message.user {
+            text-align: right;
+            color: blue;
+        }
+        .input-box {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .input-box button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .input-box button:hover {
+            background-color: #0056b3;
+        }
+        nav {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #333;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 25px;
+            flex: 1 1 0;
+        }
+        nav a img {
+            display: block;
+            margin: 0 auto;
+            width: 24px;
+            height: 24px;
+        }
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="heading">
+            <h1>Reflect</h1>
+        </div>
+        <div class="language-select">
+            <label for="language">Select Language:</label>
+            <select id="language" name="language">
+                <option value="Hindi">Hindi</option>
+                <option value="English">English</option>
+            </select>
+        </div>
+        <div class="product-select">
+            <label for="product">Select a Product:</label>
+            <select id="product" name="product">
+                <option value="">--Select a Product--</option>
+            </select>
+        </div>
+        <div class="input-box">
+            <button id="startConversation" onclick="startConversation()">Start Conversation</button>
+        </div>
+        <div class="conversation-box" id="conversationBox">
+            <!-- Conversation messages will be shown here -->
+        </div>
+        <div class="input-box">
+            <button id="startVoice" onclick="startVoiceRecognition()" disabled>Start Voice Recognition</button>
+        </div>
+    </div>
+    <nav>
+        <a href="/"><img src="/static/home_icon.png" alt="Home Icon">Home</a>
+        <a href="/recall"><img src="/static/recall_icon.png" alt="Recall Icon">Recall</a>
+        <a href="/rehearse"><img src="/static/rehearse_icon.png" alt="Rehearse Icon">Rehearse</a>
+    </nav>
+    <script>
+        var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        var conversationId = null;
+        var productId = null;
+        var selectedLanguage = "Hindi";  // Default to Hindi
+
+        // Load available products
+function loadProducts() {
+    $.ajax({
+        url: '/reflect/load-products',
+        type: 'GET',
+        success: function(response) {
+            var productSelect = $('#product');
+            productSelect.empty();
+            productSelect.append('<option value="">--Select a Product--</option>');
+            response.products.forEach(function(product) {
+                // Use product.name instead of product.id in the value attribute
+                productSelect.append('<option value="' + product.name + '">' + product.name + '</option>');
+            });
+        },
+        error: function() {
+            alert('Error loading products');
+        }
+    });
+}
+
+
+        // Start the conversation when the user clicks the Start Conversation button
+// Start the conversation when the user clicks the Start Conversation button
+function startConversation() {
+    productName = $('#product').val();  // Get product name from the dropdown
+    selectedLanguage = $('#language').val();
+
+    if (!productName) {
+        alert('Please select a product');
+        return;
+    }
+
+    $('#startConversation').prop('disabled', true);  // Disable button during request
+
+    $.ajax({
+        url: '/reflect/start_refer_conversation/' + encodeURIComponent(productName),  // Pass product name instead of ID
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        contentType: 'application/json',
+        data: JSON.stringify({
+            language: selectedLanguage  // Pass selected language to the backend
+        }),
+        success: function(response) {
+            $('#conversationBox').append('<div class="message coach">' + response.text + '</div>');
+            playAudioResponse(response.audio);
+
+            // Enable the voice recognition button after conversation starts
+            $('#startVoice').prop('disabled', false);
+            $('#startConversation').prop('disabled', false);  // Re-enable button after success
+
+            // Store the conversation_id from the response
+            conversationId = response.conversation_id;
+            sessionStorage.setItem('conversation_id', conversationId);  // Save in session storage
+        },
+        error: function() {
+            alert('Error starting conversation');
+            $('#startConversation').prop('disabled', false);  // Re-enable button on error
+        }
+    });
+}
+
+
+
+        function startVoiceRecognition() {
+            console.log("Voice recognition started...");
+            recognition = new webkitSpeechRecognition();
+            recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';  // Adjust based on selected language
+            recognition.interimResults = false;  // Only get final results
+            recognition.continuous = false;  // Stop recognition after the user stops speaking
+
+            recognition.onstart = function() {
+                console.log("Voice recognition active.");
+                $('#startVoice').text('Listening...');  // Update button text
+            };
+
+            recognition.onend = function() {
+                console.log("Voice recognition stopped.");
+                $('#startVoice').text('Start Voice Recognition');  // Reset button text
+            };
+
+            recognition.onresult = function(event) {
+                var transcript = event.results[0][0].transcript;
+                console.log("Recognized speech:", transcript);
+                $('#conversationBox').append(`<div class="message user">${transcript}</div>`);
+                sendUserMessage(transcript);  // Send the user's message to the back-end
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error: " + event.error);
+            };
+
+            recognition.start();
+        }
+//function updateCsrfAndSendMessage(transcript) {
+ //   $.get('/get-new-csrf-token', function(data) {
+ //       const newCsrfToken = data.csrf_token;
+ //       $('meta[name="csrf-token"]').attr('content', newCsrfToken);  // Update the CSRF token in the meta tag
+ //       storeUserMessage(transcript, newCsrfToken);  // Now pass the new CSRF token directly to the function
+ //   });
+//}
+
+function storeUserMessage(transcript, csrfToken) {
+    $.ajax({
+        url: '/reflect/add_refer_message',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            conversation_id: conversationId,
+            sender: 'user',
+            content: transcript
+        }),
+        headers: {
+            "X-CSRFToken": csrfToken  // Use the updated CSRF token
+        },
+        success: function(response) {
+            console.log('User message stored successfully.');
+        },
+        error: function(xhr, status, error) {
+            console.error('Error storing user message:', error);
+            alert('An error occurred while storing your message.');
+        }
+    });
+}
+
+
+
+function sendUserMessage(transcript) {
+    if (!transcript || transcript.trim() === '') {
+        console.error('No message content to send');
+        return;
+    }
+
+    if (!conversationId) {
+        console.error('No conversation ID found');
+        return;
+    }
+
+    // Validate the user's answer
+    $.ajax({
+        url: '/reflect/validate_answer',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            conversation_id: conversationId,
+            message: transcript  // Pass the transcript as the message
+        }),
+        headers: {
+            "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.feedback_text) {
+                // Display feedback text after 10 questions
+                $('#conversationBox').append('<div class="message coach">' + response.feedback_text + '</div>');
+            } else {
+                // First display and play the feedback
+                $('#conversationBox').append('<div class="message coach">' + response.answer_feedback_text + '</div>');
+
+                if (response.feedback_audio) {
+                    // Play the feedback audio first
+                    playAudioResponse(response.feedback_audio, function() {
+                        // After feedback audio finishes, show the next question
+                        $('#conversationBox').append('<div class="message coach">' + response.next_question_text + '</div>');
+                        if (response.next_question_audio) {
+                            // Play the next question audio
+                            playAudioResponse(response.next_question_audio);
+                        }
+                    });
+                } else {
+                    // If there's no audio, display the next question immediately
+                    $('#conversationBox').append('<div class="message coach">' + response.next_question_text + '</div>');
+                }
+            }
+
+            // If conversation ends, don't expect more questions
+            if (response.conversation_id) {
+                // Final feedback or next question is already handled by the backend
+            } else {
+                // Refresh the CSRF token for further interactions
+                $.get('/get-new-csrf-token', function(data) {
+                    csrfToken = data.csrf_token;  // Update the CSRF token for future requests
+                });
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error validating user message:', error);
+        }
+    });
+}
+
+// Play audio function with callback
+function playAudioResponse(audioUrl, callback) {
+    var audioPlayer = new Audio(audioUrl);
+    audioPlayer.controls = true;  // Enable audio controls if needed
+    audioPlayer.onended = function() {
+        if (callback) {
+            callback();  // Call the callback after the audio finishes
+        }
+    };
+    audioPlayer.play();
+}
+
+
+
+
+        $(document).ready(function() {
+            loadProducts();
+        });
+
+        function navigateHome() {
+            window.location.href = "/";
+        }
+    </script>
+</body>
+</html>

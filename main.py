@@ -5,9 +5,12 @@ from flask import Flask, request, render_template, jsonify, send_from_directory,
 from flask_session import Session
 from flask_login import login_required, current_user
 from datetime import timedelta
-from conversation_service import start_conversation, add_message, close_conversation, get_past_conversations
+from conversation_service import start_conversation, add_message, close_conversation, get_past_conversations, start_refer_conversation, add_refer_message, generate_refer_feedback
 import re
-
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+import random
+from langchain_community.vectorstores import FAISS
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from gtts import gTTS
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -15,11 +18,14 @@ import json
 import glob
 import csv
 from knowledge import knowledge_bp
+from reflect import reflect_bp
+
+
+
 import logging
 import site
 print(site.getsitepackages())
 import azure.cognitiveservices.speech as speechsdk
-
 from fuzzywuzzy import fuzz
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, PromptTemplate
@@ -29,7 +35,7 @@ from concurrent.futures import ThreadPoolExecutor
 from auth import auth_bp, init_auth
 from admin import admin_bp
 from authlib.integrations.flask_client import OAuth
-from models import User, Conversation, Message, Feedback, Persona
+from models import User, Conversation, Message, Feedback, Persona, ReferConversation, Product
 from extensions import login_manager, csrf, mail, oauth, db
 
 
@@ -56,6 +62,7 @@ VOICE_MAPPING = {
 app = Flask(__name__)
 #env = os.getenv('FLASK_ENV', 'development')
 # Configure app with local database
+app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 
@@ -104,6 +111,7 @@ init_auth(oauth)
 
 # Register Blueprints
 app.register_blueprint(knowledge_bp)
+app.register_blueprint(reflect_bp, url_prefix='/reflect')
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
@@ -230,7 +238,15 @@ def set_custom_persona():
 
 
 print("persona_data2",persona_data2)
+"""
 
+@app.route('/get-new-csrf-token', methods=['GET'])
+def get_new_csrf_token():
+    # Generate a new CSRF token and return it as JSON
+    csrf_token = generate_csrf()
+    return jsonify({'csrf_token': csrf_token})
+    
+"""
 
 @app.route('/load-personas')
 @login_required
@@ -363,10 +379,10 @@ def get_chat():
 
 
 
-@app.route('/refer.html')
+@app.route('/reflect.html')
 @login_required
 def refer():
-    return render_template('refer.html')
+    return render_template('reflect.html')
 
 
 @app.route('/rehearse.html')
@@ -584,6 +600,9 @@ async def remove_all_audio_files():
     except Exception as e:
         print("Error deleting audio files:", e)
         return jsonify({"error": "Failed to remove audio files"}), 500
+
+#---------------------------------------------------------------------------------------------------------------------------
+# Reflect
 
 
 

@@ -3,7 +3,7 @@ from datetime import datetime
 from flask_login import current_user
 from flask import session
 from extensions import db
-from models import Conversation, Message, Feedback
+from models import Conversation, Message, Feedback, ReferConversation, ReferMessage, ReferFeedback
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 import google.generativeai as genai
@@ -239,4 +239,53 @@ def get_past_conversations(user_id):
     return past_conversations
 
 
+#--------------------------------------------------------------------------------------
+#Reflect
+
+def start_refer_conversation(user_id, product_id):
+    conversation = ReferConversation(user_id=user_id, product_id=product_id)
+    db.session.add(conversation)
+    db.session.commit()
+    return conversation.id
+
+def add_refer_message(conversation_id, sender, content):
+    message = ReferMessage(conversation_id=conversation_id, sender=sender, content=content)
+    db.session.add(message)
+    db.session.commit()
+
+
+async def generate_refer_feedback(conversation):
+    # Fetch the conversation messages
+    formatted_conversation = "\n".join(
+        [f"{'Coach' if msg.sender == 'system' else 'User'}: {msg.content}" for msg in conversation.messages])
+
+    # Product-related feedback prompt
+    feedback_prompt = (
+        "Based on the following conversation about the selected product, provide feedback on the user's knowledge. "
+        "Assess how well the user understood the product's features and benefits. Provide a score from 0-100 and categorize the performance as Beginner, Competent, Proficient, or Expert. "
+        "Here’s the conversation:\n\n"
+        f"Conversation:\n{formatted_conversation}\n\nFeedback:"
+    )
+
+    feedback_response = await llm_invoke(feedback_prompt)
+    feedback_content = feedback_response.content if feedback_response else "Could not generate feedback."
+
+    # Process feedback and store
+    score, category = process_refer_feedback(feedback_content)
+
+    feedback = ReferFeedback(conversation_id=conversation.id, content=feedback_content, score=score, category=category)
+    db.session.add(feedback)
+    db.session.commit()
+
+    return feedback_content
+
+
+def process_refer_feedback(feedback_content):
+    # Extract score and category from feedback (this is just a basic example; you can refine this logic)
+    score = 80  # Default example score
+    category = 'Proficient'  # Example category
+
+    # Implement logic to analyze the feedback and extract actual score/category if needed.
+
+    return score, category
 

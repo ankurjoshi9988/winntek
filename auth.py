@@ -168,6 +168,7 @@ def login():
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    session.clear()  # Clear all session data on logout
     logout_user()
     return redirect(url_for('auth.login'))
 

@@ -66,10 +66,15 @@ class Feedback(db.Model):
     conversation = db.relationship('Conversation', backref=db.backref('feedback', lazy=True))
 
 class Product(db.Model):
-    __tablename__ = 'products'  # Ensure this matches the table name in SQLite
+    __tablename__ = 'products'
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
-    description = db.Column(db.String, nullable=False)
+    question_english = db.Column(db.Text, nullable=False)
+    answer_english = db.Column(db.Text, nullable=False)
+    question_hindi = db.Column(db.Text, nullable=False)
+    answer_hindi = db.Column(db.Text, nullable=False)
+
 
 class Persona(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -84,3 +89,39 @@ class Persona(db.Model):
     category = db.Column(db.String(50), nullable=False)  # Predefined or Custom
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     user = db.relationship('User', backref='personas', lazy=True)
+
+
+
+#-----------------------------------------------------------------------
+#for reflect
+
+class ReferConversation(db.Model):
+    __tablename__ = 'refer_conversations'  # Explicit table name for clarity
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user = db.relationship('User', backref='refer_conversations', lazy=True)
+    product = db.relationship('Product', backref='refer_conversations', lazy=True)
+    messages = db.relationship('ReferMessage', backref='refer_conversation', lazy=True)
+
+class ReferMessage(db.Model):
+    __tablename__ = 'refer_messages'  # Explicit table name
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('refer_conversations.id'), nullable=False)
+    sender = db.Column(db.String(50))  # 'user' or 'system' (AI)
+    content = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+class ReferFeedback(db.Model):
+    __tablename__ = 'refer_feedback'  # Explicit table name
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('refer_conversations.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    score = db.Column(db.Integer, nullable=False)  # Score out of 100
+    category = db.Column(db.String(50), nullable=False)  # Beginner, Proficient, Expert
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    conversation = db.relationship('ReferConversation', backref=db.backref('feedback', lazy=True))
+
+#------------------------------------------------------------------------------------------------------------
