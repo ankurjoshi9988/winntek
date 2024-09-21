@@ -156,13 +156,10 @@
 		function handleConversationResponse(response) {
 			console.log("Full Response Object:", response);  // Log the full response
 
-			// Check if feedback and next question exist (normal conversation flow)
 			if (response.feedback_text && response.next_question_text) {
-				console.log("Feedback and next question exist.");
 				$('#conversationBox').append('<div class="message coach">' + response.feedback_text + '</div>');
 				$('#conversationBox').append('<div class="message coach">' + response.next_question_text + '</div>');
 
-				// Play audio for feedback and then next question
 				if (response.feedback_audio) {
 					playAudioResponse(response.feedback_audio, function() {
 						if (response.next_question_audio) {
@@ -172,15 +169,10 @@
 				} else if (response.next_question_audio) {
 					playAudioResponse(response.next_question_audio);
 				}
-			}
-			// Check if it's the final feedback (end of conversation)
-			else if (response.feedback_text && response.is_final_feedback) {
-				console.log("End of conversation. Showing final feedback.");
-				// Handle final feedback at the end of the conversation
+			} else if (response.feedback_text && response.is_final_feedback) {
 				$('#conversationBox').append('<div class="message coach">' + response.feedback_text + '</div>');
 				$('#conversationBox').append('<div class="message coach">Final Feedback: ' + response.final_feedback_text + '</div>');
 
-				// Play final feedback audio if available
 				if (response.feedback_audio) {
 					playAudioResponse(response.feedback_audio, function() {
 						if (response.final_feedback_audio) {
@@ -190,10 +182,7 @@
 				} else if (response.final_feedback_audio) {
 					playAudioResponse(response.final_feedback_audio);
 				}
-				
-				console.log("End of conversation. Showing final feedback.");
 			} else if (response.text && response.audio) {
-				// Handle the first question (or conversation text)
 				$('#conversationBox').append('<div class="message coach">' + response.text + '</div>');
 				playAudioResponse(response.audio);
 			} else {
@@ -247,47 +236,101 @@
 		}
 
 
-
         // Voice recognition function        
-		function startVoiceRecognition() {
-			console.log("Voice recognition started...");
-			recognition = new webkitSpeechRecognition();
-			recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';  // Adjust based on selected language
-			recognition.interimResults = false;  // Only get final results
-			recognition.continuous = false;  // Stop recognition after the user stops speaking
 
-			// Allow the user a 3-second pause before speech recognition automatically stops
-			recognition.maxAlternatives = 1;  // Process only the most likely result
-			recognition.onstart = function() {
-				console.log("Voice recognition active.");
-				$('#startVoice').text('Listening...');  // Update button text
-			};
 
-			recognition.onend = function() {
-				console.log("Voice recognition stopped.");
-				$('#startVoice').text('Start Voice Recognition');  // Reset button text
-			};
+// Global variables
+let recognition;  
+let isRecognitionActive = false;  // Track if recognition is active
+let silenceTimer;  // Timer for 3-second silence after user stops speaking
 
-			recognition.onspeechend = function() {
-				// Add a delay to allow for pauses before the recognition session ends
-				setTimeout(function() {
-					recognition.stop();  // Stop recognition after 3 seconds of silence
-				}, 3000);  // 3-second delay to allow for pauses
-			};
+// Voice recognition function
+function startVoiceRecognition() {
+    if (isRecognitionActive) {
+        console.log("Voice recognition is already active.");
+        return;  // Prevent starting again if it's already active
+    }
 
-			recognition.onresult = function(event) {
-				var transcript = event.results[0][0].transcript;
-				console.log("Recognized speech:", transcript);
-				$('#conversationBox').append(`<div class="message user">${transcript}</div>`);
-				sendUserMessage(transcript);  // Send the user's message to the back-end
-			};
+    console.log("Voice recognition started...");
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';  // Set language
+    recognition.interimResults = false;  // Get final results only
+    recognition.continuous = true;  // Allow continuous recognition until explicitly stopped
 
-			recognition.onerror = function(event) {
-				console.error("Speech recognition error: " + event.error);
-			};
+    recognition.onstart = function() {
+        isRecognitionActive = true;
+        console.log("Voice recognition active.");
+        $('#startVoice').text('Listening...');  // Update button text
+    };
 
-			recognition.start();
-		}
+    recognition.onend = function() {
+        if (isRecognitionActive) {
+            console.log("Voice recognition stopped.");
+            $('#startVoice').text('Start Voice Recognition');  // Reset button text
+            isRecognitionActive = false;
+        }
+    };
+
+    // Trigger after user finishes speaking (with 3s pause)
+    recognition.onspeechend = function() {
+        console.log("Speech ended, waiting for possible pauses...");
+
+        // Clear any previous timers and start a new 3-second timer
+        clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(function() {
+            if (isRecognitionActive) {
+                console.log("Stopping recognition after 3 seconds of silence.");
+                recognition.stop();  // Stop recognition if no speech after 3 seconds
+            }
+        }, 3000);  // 3-second delay to allow for pauses
+    };
+
+    recognition.onresult = function(event) {
+        var transcript = event.results[0][0].transcript;
+        console.log("Recognized speech:", transcript);
+        $('#conversationBox').append(`<div class="message user">${transcript}</div>`);
+        sendUserMessage(transcript);  // Send the user's message to the back-end
+    };
+
+    recognition.onerror = function(event) {
+        console.error("Speech recognition error: " + event.error);
+        isRecognitionActive = false;  // Set flag to false on error
+        $('#startVoice').text('Start Voice Recognition');  // Reset button
+    };
+
+    recognition.start();
+}
+
+// Function to stop voice recognition manually
+function stopVoiceRecognition() {
+    if (recognition && isRecognitionActive) {
+        console.log("Manually stopping voice recognition...");
+        recognition.stop();
+        isRecognitionActive = false;
+        $('#startVoice').text('Start Voice Recognition');  // Reset button text
+    }
+}
+
+// Function to play audio and stop recognition before playing the next question
+function playAudioResponse(audioUrl, callback) {
+    if (isRecognitionActive) {
+        console.log("Stopping voice recognition before playing audio...");
+        stopVoiceRecognition();  // Explicitly stop voice recognition before playing audio
+    }
+
+    var audioPlayer = new Audio(audioUrl);
+    audioPlayer.controls = true;  // Enable audio controls if needed
+
+    audioPlayer.onended = function() {
+        if (callback) {
+            callback();  // Call the callback after the audio finishes
+        }
+    };
+
+    audioPlayer.play();
+}
+
+
 
 
         // Send user's message to validate the answer
@@ -339,17 +382,7 @@
 
 
 
-        // Play audio function with callback
-        function playAudioResponse(audioUrl, callback) {
-            var audioPlayer = new Audio(audioUrl);
-            audioPlayer.controls = true;  // Enable audio controls if needed
-            audioPlayer.onended = function() {
-                if (callback) {
-                    callback();  // Call the callback after the audio finishes
-                }
-            };
-            audioPlayer.play();
-        }
+
 
         $(document).ready(function() {
             loadProducts();
