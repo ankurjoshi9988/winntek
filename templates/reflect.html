@@ -14,14 +14,6 @@
             margin: 0;
             padding: 0;
         }
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
         .heading {
             text-align: center;
             margin-bottom: 20px;
@@ -63,6 +55,15 @@
         .input-box button:hover {
             background-color: #0056b3;
         }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 70px;
+        }
         nav {
             font-family: 'Roboto', sans-serif;
             display: flex;
@@ -73,6 +74,7 @@
             position: fixed;
             bottom: 0;
             width: 100%;
+            z-index: 1000;
         }
         nav a {
             color: white;
@@ -114,6 +116,7 @@
         <div class="input-box">
             <button id="startConversation" onclick="startConversation()">Start Conversation</button>
         </div>
+
         <div class="conversation-box" id="conversationBox">
             <!-- Conversation messages will be shown here -->
         </div>
@@ -128,223 +131,229 @@
     </nav>
     <script>
         var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        var conversationId = null;
-        var productId = null;
+        var conversationId = null;  // Initialize to null
         var selectedLanguage = "Hindi";  // Default to Hindi
 
         // Load available products
-function loadProducts() {
-    $.ajax({
-        url: '/reflect/load-products',
-        type: 'GET',
-        success: function(response) {
-            var productSelect = $('#product');
-            productSelect.empty();
-            productSelect.append('<option value="">--Select a Product--</option>');
-            response.products.forEach(function(product) {
-                // Use product.name instead of product.id in the value attribute
-                productSelect.append('<option value="' + product.name + '">' + product.name + '</option>');
+        function loadProducts() {
+            $.ajax({
+                url: '/reflect/load-products',
+                type: 'GET',
+                success: function(response) {
+                    var productSelect = $('#product');
+                    productSelect.empty();
+                    productSelect.append('<option value="">--Select a Product--</option>');
+                    response.products.forEach(function(product) {
+                        productSelect.append('<option value="' + product.name + '">' + product.name + '</option>');
+                    });
+                },
+                error: function() {
+                    alert('Error loading products');
+                }
             });
-        },
-        error: function() {
-            alert('Error loading products');
         }
-    });
-}
+		
+		function handleConversationResponse(response) {
+			console.log("Full Response Object:", response);  // Log the full response
+
+			// Check if feedback and next question exist (normal conversation flow)
+			if (response.feedback_text && response.next_question_text) {
+				console.log("Feedback and next question exist.");
+				$('#conversationBox').append('<div class="message coach">' + response.feedback_text + '</div>');
+				$('#conversationBox').append('<div class="message coach">' + response.next_question_text + '</div>');
+
+				// Play audio for feedback and then next question
+				if (response.feedback_audio) {
+					playAudioResponse(response.feedback_audio, function() {
+						if (response.next_question_audio) {
+							playAudioResponse(response.next_question_audio);
+						}
+					});
+				} else if (response.next_question_audio) {
+					playAudioResponse(response.next_question_audio);
+				}
+			}
+			// Check if it's the final feedback (end of conversation)
+			else if (response.feedback_text && response.is_final_feedback) {
+				console.log("End of conversation. Showing final feedback.");
+				// Handle final feedback at the end of the conversation
+				$('#conversationBox').append('<div class="message coach">' + response.feedback_text + '</div>');
+				$('#conversationBox').append('<div class="message coach">Final Feedback: ' + response.final_feedback_text + '</div>');
+
+				// Play final feedback audio if available
+				if (response.feedback_audio) {
+					playAudioResponse(response.feedback_audio, function() {
+						if (response.final_feedback_audio) {
+							playAudioResponse(response.final_feedback_audio);
+						}
+					});
+				} else if (response.final_feedback_audio) {
+					playAudioResponse(response.final_feedback_audio);
+				}
+				
+				console.log("End of conversation. Showing final feedback.");
+			} else if (response.text && response.audio) {
+				// Handle the first question (or conversation text)
+				$('#conversationBox').append('<div class="message coach">' + response.text + '</div>');
+				playAudioResponse(response.audio);
+			} else {
+				console.error('Error: Missing feedback or next question');
+				$('#conversationBox').append('<div class="message coach">Error: Missing feedback or next question</div>');
+			}
+		}
+
 
 
         // Start the conversation when the user clicks the Start Conversation button
-// Start the conversation when the user clicks the Start Conversation button
-function startConversation() {
-    productName = $('#product').val();  // Get product name from the dropdown
-    selectedLanguage = $('#language').val();
+        function startConversation() {
+			productName = $('#product').val();
+			selectedLanguage = $('#language').val();
 
-    if (!productName) {
-        alert('Please select a product');
-        return;
-    }
+			if (!productName) {
+				alert('Please select a product');
+				return;
+			}
 
-    $('#startConversation').prop('disabled', true);  // Disable button during request
+			$('#startConversation').prop('disabled', true);
 
-    $.ajax({
-        url: '/reflect/start_refer_conversation/' + encodeURIComponent(productName),  // Pass product name instead of ID
-        type: 'POST',
-        headers: {
-            'X-CSRFToken': csrfToken
-        },
-        contentType: 'application/json',
-        data: JSON.stringify({
-            language: selectedLanguage  // Pass selected language to the backend
-        }),
-        success: function(response) {
-            $('#conversationBox').append('<div class="message coach">' + response.text + '</div>');
-            playAudioResponse(response.audio);
+			$.ajax({
+				url: '/reflect/conversation/' + encodeURIComponent(productName),
+				type: 'POST',
+				headers: {
+					'X-CSRFToken': csrfToken
+				},
+				contentType: 'application/json',
+				data: JSON.stringify({ language: selectedLanguage }),
+				success: function(response) {
+					if (response.conversation_id) {
+						conversationId = response.conversation_id;
+						sessionStorage.setItem('conversation_id', conversationId);  // Save for persistence
+					} else {
+						console.error('No conversation ID found');
+						return;
+					}
 
-            // Enable the voice recognition button after conversation starts
-            $('#startVoice').prop('disabled', false);
-            $('#startConversation').prop('disabled', false);  // Re-enable button after success
+					// Use the refactored function to handle the response
+					handleConversationResponse(response);
 
-            // Store the conversation_id from the response
-            conversationId = response.conversation_id;
-            sessionStorage.setItem('conversation_id', conversationId);  // Save in session storage
-        },
-        error: function() {
-            alert('Error starting conversation');
-            $('#startConversation').prop('disabled', false);  // Re-enable button on error
-        }
-    });
-}
-
-
-
-        function startVoiceRecognition() {
-            console.log("Voice recognition started...");
-            recognition = new webkitSpeechRecognition();
-            recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';  // Adjust based on selected language
-            recognition.interimResults = false;  // Only get final results
-            recognition.continuous = false;  // Stop recognition after the user stops speaking
-
-            recognition.onstart = function() {
-                console.log("Voice recognition active.");
-                $('#startVoice').text('Listening...');  // Update button text
-            };
-
-            recognition.onend = function() {
-                console.log("Voice recognition stopped.");
-                $('#startVoice').text('Start Voice Recognition');  // Reset button text
-            };
-
-            recognition.onresult = function(event) {
-                var transcript = event.results[0][0].transcript;
-                console.log("Recognized speech:", transcript);
-                $('#conversationBox').append(`<div class="message user">${transcript}</div>`);
-                sendUserMessage(transcript);  // Send the user's message to the back-end
-            };
-
-            recognition.onerror = function(event) {
-                console.error("Speech recognition error: " + event.error);
-            };
-
-            recognition.start();
-        }
-//function updateCsrfAndSendMessage(transcript) {
- //   $.get('/get-new-csrf-token', function(data) {
- //       const newCsrfToken = data.csrf_token;
- //       $('meta[name="csrf-token"]').attr('content', newCsrfToken);  // Update the CSRF token in the meta tag
- //       storeUserMessage(transcript, newCsrfToken);  // Now pass the new CSRF token directly to the function
- //   });
-//}
-
-function storeUserMessage(transcript, csrfToken) {
-    $.ajax({
-        url: '/reflect/add_refer_message',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            conversation_id: conversationId,
-            sender: 'user',
-            content: transcript
-        }),
-        headers: {
-            "X-CSRFToken": csrfToken  // Use the updated CSRF token
-        },
-        success: function(response) {
-            console.log('User message stored successfully.');
-        },
-        error: function(xhr, status, error) {
-            console.error('Error storing user message:', error);
-            alert('An error occurred while storing your message.');
-        }
-    });
-}
+					$('#startVoice').prop('disabled', false);
+					$('#startConversation').prop('disabled', false);
+				},
+				error: function() {
+					alert('Error starting conversation');
+					$('#startConversation').prop('disabled', false);
+				}
+			});
+		}
 
 
 
-function sendUserMessage(transcript) {
-    if (!transcript || transcript.trim() === '') {
-        console.error('No message content to send');
-        return;
-    }
+        // Voice recognition function        
+		function startVoiceRecognition() {
+			console.log("Voice recognition started...");
+			recognition = new webkitSpeechRecognition();
+			recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';  // Adjust based on selected language
+			recognition.interimResults = false;  // Only get final results
+			recognition.continuous = false;  // Stop recognition after the user stops speaking
 
-    if (!conversationId) {
-        console.error('No conversation ID found');
-        return;
-    }
+			// Allow the user a 3-second pause before speech recognition automatically stops
+			recognition.maxAlternatives = 1;  // Process only the most likely result
+			recognition.onstart = function() {
+				console.log("Voice recognition active.");
+				$('#startVoice').text('Listening...');  // Update button text
+			};
 
-    // Validate the user's answer
-    $.ajax({
-        url: '/reflect/validate_answer',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            conversation_id: conversationId,
-            message: transcript  // Pass the transcript as the message
-        }),
-        headers: {
-            "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
-        },
-        success: function(response) {
-            if (response.feedback_text) {
-                // Display feedback text after 10 questions
-                $('#conversationBox').append('<div class="message coach">' + response.feedback_text + '</div>');
-            } else {
-                // First display and play the feedback
-                $('#conversationBox').append('<div class="message coach">' + response.answer_feedback_text + '</div>');
+			recognition.onend = function() {
+				console.log("Voice recognition stopped.");
+				$('#startVoice').text('Start Voice Recognition');  // Reset button text
+			};
 
-                if (response.feedback_audio) {
-                    // Play the feedback audio first
-                    playAudioResponse(response.feedback_audio, function() {
-                        // After feedback audio finishes, show the next question
-                        $('#conversationBox').append('<div class="message coach">' + response.next_question_text + '</div>');
-                        if (response.next_question_audio) {
-                            // Play the next question audio
-                            playAudioResponse(response.next_question_audio);
-                        }
-                    });
-                } else {
-                    // If there's no audio, display the next question immediately
-                    $('#conversationBox').append('<div class="message coach">' + response.next_question_text + '</div>');
+			recognition.onspeechend = function() {
+				// Add a delay to allow for pauses before the recognition session ends
+				setTimeout(function() {
+					recognition.stop();  // Stop recognition after 3 seconds of silence
+				}, 3000);  // 3-second delay to allow for pauses
+			};
+
+			recognition.onresult = function(event) {
+				var transcript = event.results[0][0].transcript;
+				console.log("Recognized speech:", transcript);
+				$('#conversationBox').append(`<div class="message user">${transcript}</div>`);
+				sendUserMessage(transcript);  // Send the user's message to the back-end
+			};
+
+			recognition.onerror = function(event) {
+				console.error("Speech recognition error: " + event.error);
+			};
+
+			recognition.start();
+		}
+
+
+        // Send user's message to validate the answer
+        function sendUserMessage(transcript) {
+			if (!transcript || transcript.trim() === '') {
+				console.error('No message content to send');
+				return;
+			}
+
+			if (!conversationId) {
+				console.error('No conversation ID found');
+				return;
+			}
+			
+			console.log("Sending payload:", {
+				conversation_id: conversationId,
+				message: transcript,
+				language: $('#language').val()
+			});
+
+
+			$.ajax({
+				url: '/reflect/conversation/' + encodeURIComponent(productName),
+				type: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({
+					message: transcript,
+					language: $('#language').val()
+				}),
+				headers: {
+					"X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+				},
+				success: function(response) {
+					handleConversationResponse(response);
+
+					if (!response.conversation_id) {
+						console.log("Conversation has ended.");
+						$('#startVoice').prop('disabled', true);
+					}
+				},
+				error: function(xhr, status, error) {
+					console.error('Error validating user message:', error);
+					$('#conversationBox').append('<div class="message coach">Error validating your message. Please try again.</div>');
+				}
+			});
+		}
+
+
+
+
+
+        // Play audio function with callback
+        function playAudioResponse(audioUrl, callback) {
+            var audioPlayer = new Audio(audioUrl);
+            audioPlayer.controls = true;  // Enable audio controls if needed
+            audioPlayer.onended = function() {
+                if (callback) {
+                    callback();  // Call the callback after the audio finishes
                 }
-            }
-
-            // If conversation ends, don't expect more questions
-            if (response.conversation_id) {
-                // Final feedback or next question is already handled by the backend
-            } else {
-                // Refresh the CSRF token for further interactions
-                $.get('/get-new-csrf-token', function(data) {
-                    csrfToken = data.csrf_token;  // Update the CSRF token for future requests
-                });
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('Error validating user message:', error);
+            };
+            audioPlayer.play();
         }
-    });
-}
-
-// Play audio function with callback
-function playAudioResponse(audioUrl, callback) {
-    var audioPlayer = new Audio(audioUrl);
-    audioPlayer.controls = true;  // Enable audio controls if needed
-    audioPlayer.onended = function() {
-        if (callback) {
-            callback();  // Call the callback after the audio finishes
-        }
-    };
-    audioPlayer.play();
-}
-
-
-
 
         $(document).ready(function() {
             loadProducts();
         });
-
-        function navigateHome() {
-            window.location.href = "/";
-        }
     </script>
 </body>
 </html>

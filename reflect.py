@@ -5,7 +5,7 @@ import azure.cognitiveservices.speech as speechsdk
 import asyncio
 from models import Product, ReferConversation, Conversation  # Adjust based on your project structure
 from flask import Blueprint
-import numpy as np
+import difflib
 import os
 import google.generativeai as genai
 from langchain_community.vectorstores import FAISS
@@ -151,15 +151,25 @@ async def start_refer_conversation(product_name):
         session['questions_asked'] = 1
         session.modified = True
 
+        """
+        # Add the following block to handle the first question
+        if session['questions_asked'] == 1:
+            first_question = session['shuffled_questions'][0]['question']
+            session['current_question'] = first_question
+
+        
+        f"नमस्ते! मैं आज आपका कोच हूँ। हम साथ में {product_name} के बारे में आपके ज्ञान को समझेंगे। कोई चिंता की बात नहीं, मैं यहाँ आपकी मदद के लिए हूँ। यह रहा आपका पहला प्रश्न।",
+        f"नमस्कार! आज हम {product_name} के बारे में आपकी समझ का परीक्षण करेंगे। मैं आपके साथ हूँ और हर कदम पर आपका मार्गदर्शन करूंगा। तो, शुरू करते हैं। यहाँ पहला प्रश्न है।",
+        f"आपका स्वागत है! मैं आपका कोच हूँ और आज हम {product_name} से जुड़ी कुछ बातें जानेंगे। आप तैयार हैं? तो चलिए शुरू करते हैं, यह रहा पहला सवाल।",
+        f"नमस्ते! मैं यहाँ हूँ आपकी मदद के लिए, ताकि हम मिलकर {product_name} के बारे में आपकी जानकारी को सुधारें। कोई भी संकोच मत कीजिए, यह रहा आपका पहला प्रश्न।",
+        f"नमस्कार! आज हम {product_name} पर आधारित आपके ज्ञान का मूल्यांकन करेंगे। चिंता मत कीजिए, मैं आपके साथ हूँ। शुरू करते हैं, यह रहा पहला सवाल।"
+        """
+
 
         # AI Coach greeting and context setting based on selected language
         if session['language'] == "Hindi":
             hindi_greetings = [
-                f"नमस्ते! मैं आज आपका कोच हूँ। हम साथ में {product_name} के बारे में आपके ज्ञान को समझेंगे। कोई चिंता की बात नहीं, मैं यहाँ आपकी मदद के लिए हूँ। यह रहा आपका पहला प्रश्न।",
-                f"नमस्कार! आज हम {product_name} के बारे में आपकी समझ का परीक्षण करेंगे। मैं आपके साथ हूँ और हर कदम पर आपका मार्गदर्शन करूंगा। तो, शुरू करते हैं। यहाँ पहला प्रश्न है।",
-                f"आपका स्वागत है! मैं आपका कोच हूँ और आज हम {product_name} से जुड़ी कुछ बातें जानेंगे। आप तैयार हैं? तो चलिए शुरू करते हैं, यह रहा पहला सवाल।",
-                f"नमस्ते! मैं यहाँ हूँ आपकी मदद के लिए, ताकि हम मिलकर {product_name} के बारे में आपकी जानकारी को सुधारें। कोई भी संकोच मत कीजिए, यह रहा आपका पहला प्रश्न।",
-                f"नमस्कार! आज हम {product_name} पर आधारित आपके ज्ञान का मूल्यांकन करेंगे। चिंता मत कीजिए, मैं आपके साथ हूँ। शुरू करते हैं, यह रहा पहला सवाल।"
+                f"{product_name}"
             ]
             # Randomly select a greeting
             coach_greeting = random.choice(hindi_greetings)
@@ -195,8 +205,7 @@ async def start_refer_conversation(product_name):
 
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
             print(f"Speech synthesized for text [{conversation_context}]")
-        elif result.reason == speechsdk.ResultReason.Canceled:
-            print(f"Speech synthesis canceled: {result.cancellation_details.reason}")
+
 
         # Return conversation context and audio file name
         return jsonify({
@@ -226,26 +235,35 @@ async def validate_answer():
             return jsonify({"error": "Session data is missing."}), 400
 
         # Get the current question-answer pair
-        current_question_index = session['questions_asked'] - 1
+        current_question_index = session['questions_asked'] - 1  # Questions asked starts from 1, so subtract 1
+
+        # Ensure the index is within bounds
+        if current_question_index >= len(session['shuffled_questions']):
+            return jsonify({"error": "No more questions available."}), 400
+
         current_qa_pair = session['shuffled_questions'][current_question_index]
 
         # Fetch the correct answer for the current question
         correct_answer = current_qa_pair['answer']
         print("correct_answer: ", correct_answer)
         # Modify the prompt to explicitly ask for answer evaluation
+        # आप एक कोच हैं जो user के उत्तर का संक्षिप्त में मूल्यांकन कर रहे हैं। user का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}".
+        #यदि अधूरा है या गलत है, तो सही उत्तर को संक्षिप्त में समझाएं और user को आगे बढ़ने के लिए प्रेरित करें।
+        #छात्र के उत्तर की तुलना सही उत्तर से करें और यह निर्धारित करें कि यह सही है, अधूरा है या गलत।
+        #यदि सही है, तो छात्र की प्रशंसा करें और उसे प्रोत्साहन दें।
+
         if session['language'] == "Hindi":
             prompt = f"""
-                    आप एक कोच हैं जो छात्र के उत्तर का मूल्यांकन कर रहे हैं। छात्र का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}".
-                    छात्र के उत्तर की तुलना सही उत्तर से करें और यह निर्धारित करें कि यह सही है या गलत।
-                    यदि सही है, तो छात्र की प्रशंसा करें और उसे प्रोत्साहन दें।
-                    यदि गलत है, तो सही उत्तर को संक्षेप में समझाएं और छात्र को आगे बढ़ने के लिए प्रेरित करें।
+                    "{user_answer}".    
+                    user को 'आप' के रूप में सम्बोधित करें
                     """
         else:
             prompt = f"""
-                    You are a coach evaluating a student's response. The student's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
-                    Compare the student's answer with the correct answer and determine if it's correct or incorrect.
+                    You are a coach evaluating a user's response. The student's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
+                    Compare the student's answer with the correct answer and determine if it's correct, incomplete or incorrect.
+                    If incorrect, briefly explain the correct answer and motivate the user to continue.
                     If correct, praise the student and provide motivational feedback.
-                    If incorrect, briefly explain the correct answer and motivate the student to continue.
+                    address user as "you'
                     """
 
         # AI LLM call to generate a human-like conversational response
@@ -258,37 +276,40 @@ async def validate_answer():
         # Logging to track the condition evaluation
         print(f"Coach response: {coach_response_lower}")
 
-        # Check if the response contains feedback indicating the answer is correct, incomplete, or incorrect
-        if "correct" in coach_response.lower() and "incomplete" not in coach_response.lower() and "अधूरा" not in coach_response and "गलत" not in coach_response:
-            session['correct_answers'] += 1  # Increment correct answers if the LLM indicates it's fully correct
+        # Check the response for correctness
+        if "correct" in coach_response.lower() and "incomplete" not in coach_response.lower():
+            #session['correct_answers'] += 1
             print(f"Correct answers so far: {session['correct_answers']}")
-        elif "incomplete" in coach_response.lower() or "अधूरा" in coach_response:  # Handle incomplete answers
+        elif "incomplete" in coach_response.lower():
             print("The answer was incomplete.")
         else:
             print("The answer was marked incorrect.")
 
-        session['questions_asked'] += 1
+
         """
-        # Check if we've reached the limit of 10 questions
-        if session['questions_asked'] > 10 or session['questions_asked'] > session['total_questions']:
+        # If all questions are answered, provide feedback
+        if session['questions_asked'] >= session['total_questions']:
             final_score = session['correct_answers']
-            feedback = generate_feedback(final_score, session['total_questions']+1)  # Provide feedback after 10 questions or when all are asked
-            print("feedback: ", feedback)
-            response = jsonify({"feedback_text": feedback, "conversation_id": conversation_id})
-            # Clear the session after sending the response
-            session.clear()  # End the quiz after feedback is generated
+            feedback = generate_feedback(final_score, session['total_questions'])
+            session.clear()  # Clear the session after feedback
+            return jsonify({"feedback_text": feedback, "conversation_id": conversation_id})
+            
+        """
 
-            return response
-            """
-        # Move to the next question
+        # Get the next question
         next_question_index = session['questions_asked'] - 1
-        next_question = session['shuffled_questions'][next_question_index]['question']
+        if next_question_index < len(session['shuffled_questions']):
+            next_question = session['shuffled_questions'][next_question_index]['question']
+            session['current_question'] = next_question
+        else:
+            return jsonify({"error": "No more questions available."}), 400
 
-        # Store the next question in the session
-        session['current_question'] = next_question
-
-        # Full conversational context with the coach-like behavior
+        # Full conversational context
         conversation_context = f"{coach_response}\n{next_question}"
+
+        # Increment the questions asked
+        #session['questions_asked'] += 1
+
 
         language = request.json.get('language', session.get('language', 'Hindi'))
         session['language'] = language
@@ -314,6 +335,8 @@ async def validate_answer():
         elif feedback_result.reason == speechsdk.ResultReason.Canceled:
             print(f"Feedback speech synthesis canceled: {feedback_result.cancellation_details.reason}")
 
+
+
         # Synthesize the next question
         next_question_audio_file_name = str(uuid.uuid4()) + ".mp3"
         next_question_prompt = f"Here's your next question: {next_question}"
@@ -325,6 +348,8 @@ async def validate_answer():
             print(f"Next question speech synthesized for question [{next_question_prompt}]")
         elif next_question_result.reason == speechsdk.ResultReason.Canceled:
             print(f"Next question speech synthesis canceled: {next_question_result.cancellation_details.reason}")
+
+
 
         return jsonify({
             "answer_feedback_text": correct_answer,
@@ -342,57 +367,248 @@ async def validate_answer():
         current_app.logger.error(f"Error in validate_answer: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-def get_conversational_chain():
-    prompt_template = """
-    संदर्भ (Context):\n{context}\n
-    प्रश्न (Question):\n{question}\n
-    उत्तर (Answer):
-    Provide a clear and well-structured response. If the answer is not available, simply state, "उत्तर संदर्भ में उपलब्ध नहीं है" (answer is not available in the context).
-    """
 
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-
-    return chain
 
 
 # Validate user answer using RAG-based semantic similarity
-def cosine_similarity(vec1, vec2):
-    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+@reflect_bp.route('/conversation/<string:product_name>', methods=['POST'])
+@login_required
+async def manage_conversation(product_name):
+    try:
 
-# Updated RAG validation function using embeddings
-def validate_user_answer_with_rag(user_answer, correct_answer):
-    """
-    This function uses RAG to validate the user's answer based on similarity matching.
-    """
+        # Step 1: Get the selected language from the request
+        language = request.json.get('language', session.get('language', 'Hindi'))
+        session['language'] = language
+        user_answer = request.json.get('message', '').strip().lower()
 
-    # Load embeddings and FAISS index
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vector_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+        # Step 2: Check if it's a new conversation
+        conversation_id = session.get('conversation_id')
 
-    # Get embeddings for user answer and correct answer
-    user_answer_embedding = embeddings.embed_documents([user_answer])[0]
-    correct_answer_embedding = embeddings.embed_documents([correct_answer])[0]
+        # Log incoming request details
+        current_app.logger.info(f"Received conversation ID: {conversation_id}, User Answer: {user_answer}")
 
-    # Calculate similarity between user answer and correct answer embeddings
-    similarity_score = cosine_similarity(user_answer_embedding, correct_answer_embedding)
+        if not conversation_id:
+            # Initialize a new conversation
+            conversation_id = initialize_refer_conversation(current_user.id, product_name)
+            session['conversation_id'] = conversation_id
+            session['score'] = 0
+            session['questions_asked'] = 0
+            session['correct_answers'] = 0
 
-    # Set a threshold for determining correctness (e.g., 0.8 for 80% similarity)
-    threshold = 0.8
-    is_correct = similarity_score >= threshold
-    print("is_correct: ",is_correct)
-    return is_correct, similarity_score
+            # Fetch both questions and their corresponding answers based on language
+            if language == "Hindi":
+                product_questions = Product.query.filter_by(name=product_name).with_entities(
+                    Product.question_hindi, Product.answer_hindi).all()
+            else:
+                product_questions = Product.query.filter_by(name=product_name).with_entities(
+                    Product.question_english, Product.answer_english).all()
+
+            if not product_questions:
+                return jsonify({"error": "No questions found for the selected product."}), 404
+
+            # Shuffle the questions while keeping answers paired
+            random.shuffle(product_questions)
+
+            # Store both questions and answers in session for easy retrieval
+            session['shuffled_questions'] = [{'question': q[0], 'answer': q[1]} for q in product_questions]
+            session['total_questions'] = min(10, len(session['shuffled_questions']))  # Set total to 10
+
+            # Get the first question
+            current_question = session['shuffled_questions'][0]['question']
+            session['current_question'] = current_question
+            session['questions_asked'] = 1
+            session.modified = True
+
+            # AI Coach greeting and context setting based on selected language
+            if session['language'] == "Hindi":
+                hindi_greetings = [
+                    f"नमस्ते! मैं आज आपका कोच हूँ। हम साथ में {product_name} के बारे में आपके ज्ञान को समझेंगे। कोई चिंता की बात नहीं, मैं यहाँ आपकी मदद के लिए हूँ। यह रहा आपका पहला प्रश्न।",
+                    f"नमस्कार! आज हम {product_name} के बारे में आपकी समझ का परीक्षण करेंगे। मैं आपके साथ हूँ और हर कदम पर आपका मार्गदर्शन करूंगा। तो, शुरू करते हैं। यहाँ पहला प्रश्न है।",
+                    f"आपका स्वागत है! मैं आपका कोच हूँ और आज हम {product_name} से जुड़ी कुछ बातें जानेंगे। आप तैयार हैं? तो चलिए शुरू करते हैं, यह रहा पहला सवाल।",
+                    f"नमस्ते! मैं यहाँ हूँ आपकी मदद के लिए, ताकि हम मिलकर {product_name} के बारे में आपकी जानकारी को सुधारें। कोई भी संकोच मत कीजिए, यह रहा आपका पहला प्रश्न।",
+                    f"नमस्कार! आज हम {product_name} पर आधारित आपके ज्ञान का मूल्यांकन करेंगे। चिंता मत कीजिए, मैं आपके साथ हूँ। शुरू करते हैं, यह रहा पहला सवाल।"
+                ]
+                # Randomly select a greeting
+                coach_greeting = random.choice(hindi_greetings)
+                question_prompt = current_question
+
+            else:
+                english_greetings = [
+                    f"Hello! I'm your coach today. Let’s explore your knowledge of {product_name}. Don’t worry, I’m here to guide you. Here’s your first question.",
+                    f"Welcome! I'm here to help you test your understanding of {product_name}. Ready? Let’s dive in. Here's the first question for you.",
+                    f"Hello! Let’s work together to assess your knowledge of {product_name}. No need to worry, I’ll be right here to assist. Here's your first question.",
+                    f"Greetings! I'm your coach today, and we’ll be covering {product_name}. Don’t worry, I’ll guide you through it step by step. Let's begin with the first question.",
+                    f"Hi! I’m here to guide you through a quick test of your knowledge on {product_name}. I’ll be with you throughout. Here’s your first question."
+                ]
+                # Randomly select a greeting
+                coach_greeting = random.choice(english_greetings)
+                question_prompt = current_question
+            # Synthesize and return the first question with audio
+            conversation_context = f"{coach_greeting}\n{question_prompt}"
+
+            print(f"Generating speech for: {conversation_context}")
+            audio_file_name = await synthesize_speech(conversation_context, language)
+            print(f"Audio file generated: {audio_file_name}")
+
+            if not audio_file_name:
+                print(f"Error generating audio for question prompt: {conversation_context}")
+                return jsonify({"error": "Failed to generate audio for the conversation."}), 500
+
+            return jsonify({
+                "text": current_question,
+                "audio": f"/static/{audio_file_name}",
+                "conversation_id": conversation_id
+            })
+
+
+        # Step 3: If conversation is already ongoing, validate the user's answer
+        if 'shuffled_questions' not in session or 'questions_asked' not in session:
+            current_app.logger.error("Session data missing: shuffled_questions or questions_asked")
+            return jsonify({"error": "Session data is missing."}), 400
+
+        current_question_index = session['questions_asked'] - 1
+
+        # Ensure the index is within bounds
+        if current_question_index >= len(session['shuffled_questions']):
+            return jsonify({"error": "No more questions available."}), 400
+
+        current_qa_pair = session['shuffled_questions'][current_question_index]
+        correct_answer = current_qa_pair['answer']
+        current_app.logger.info(f"Current question index: {current_question_index}, Correct Answer: {correct_answer}")
+
+        # AI LLM call to generate a human-like conversational response
+        feedback_text = await get_coach_feedback(user_answer, correct_answer, language)
+        print(f"Coach feedback: {feedback_text}")
+
+        # Step 4: Generate feedback for the current question
+        feedback_audio_file_name = await synthesize_speech(feedback_text, language)
+        if not feedback_audio_file_name:
+            print(f"Error generating audio for feedback: {feedback_text}")
+            return jsonify({"error": "Failed to generate audio for feedback."}), 500
+
+        # Ensure audio file is created
+        if not feedback_audio_file_name:
+            print(f"Error generating audio for feedback: {feedback_text}")
+            return jsonify({"error": "Failed to generate audio for feedback."}), 500
+
+        # Check similarity ratio between user_answer and correct_answer
+        similarity_ratio = difflib.SequenceMatcher(None, user_answer, correct_answer).ratio()
+
+        # Check the response for correctness
+        if ("correct" in feedback_text.lower() or "सही" in feedback_text.lower()) and similarity_ratio >= 0.6:
+            session['correct_answers'] += 1
+            print("score: ",session['correct_answers'])
+            print(f"The answer was incomplete but matched {similarity_ratio * 100:.2f}% of the correct answer.")
+        elif ("incomplete" in feedback_text.lower() or "अधूरा" in feedback_text.lower() or "correct" in feedback_text.lower() or "सही" in feedback_text.lower()) and similarity_ratio >= 0.2:
+            session['correct_answers'] += 1 / 2
+            print("score: ",session['correct_answers'])
+            print(f"The answer was incomplete but matched {similarity_ratio * 100:.2f}% of the correct answer.")
+        else:
+            print("The answer was marked incorrect.")
 
 
 
-def get_vector_store(product_descriptions):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vector_store = FAISS.from_texts(product_descriptions, embedding=embeddings)
-    vector_store.save_local("faiss_index")
-    return vector_store
+        # Step 5: Check if all questions have been asked
+        current_app.logger.info(f"Total questions available: {session.get('total_questions')}")
+        # Step 5: Check if all questions have been asked, and handle the final feedback
+        if session['questions_asked'] >= session['total_questions']:
+            final_score = session['correct_answers']
+            final_feedback = generate_feedback(final_score, session['total_questions'])
+
+            # Synthesize audio for the last individual feedback
+            feedback_audio_file_name = await synthesize_speech(feedback_text, language)
+
+            # Synthesize final feedback audio (optional: you can create a final summary VO if needed)
+            final_feedback_audio_file_name = await synthesize_speech(final_feedback, language)
+
+            # Clear the session after generating the final feedback
+            session.clear()  # End the quiz after feedback
+
+            return jsonify({
+                "feedback_text": correct_answer,  # Feedback for the last question
+                "feedback_audio": f"/static/{feedback_audio_file_name}",  # Feedback audio for the last question
+                "final_feedback_text": final_feedback,  # Final feedback for the entire session
+                "final_feedback_audio": f"/static/{final_feedback_audio_file_name}",  # Final feedback audio (optional)
+                "conversation_id": conversation_id,
+                "is_final_feedback": True  # Indicator for the front end to know it's the end
+            })
+
+        # Step 6: If not the last question, get the next question
+
+        # Increment questions asked, but check bounds before accessing next question
+        next_question_index = session['questions_asked']  # Start with the current question index
+
+        # Ensure the index is within bounds
+        if next_question_index >= len(session['shuffled_questions']):
+            current_app.logger.error(
+                f"Questions asked exceed available questions. Questions Asked: {next_question_index}, Total: {len(session['shuffled_questions'])}")
+            return jsonify({"error": "No more questions available."}), 400
+
+        # Get the next question based on the current index
+        next_question = session['shuffled_questions'][next_question_index]['question']
+        session['current_question'] = next_question
+
+        # Increment questions asked only after successfully retrieving the question
+        session['questions_asked'] += 1
+        session.modified = True
+
+        # Synthesize and return the next question with audio
+        print(f"Generating next question speech for: {next_question}")
+        next_question_audio_file_name = await synthesize_speech(f"Here is your next question \n{next_question}", language)
+        print(f"Next question audio file: {next_question_audio_file_name}")
+
+        if not next_question_audio_file_name:
+            print(f"Error generating audio for next question: {next_question}")
+            return jsonify({"error": "Failed to generate audio for the next question."}), 500
+
+        return jsonify({
+            "feedback_text": correct_answer,  # Feedback from coach
+            "feedback_audio": f"/static/{feedback_audio_file_name}",  # Feedback audio file
+            "next_question_text": next_question,
+            "next_question_audio": f"/static/{next_question_audio_file_name}",
+            "conversation_id": conversation_id
+        })
+
+    except IndexError as e:
+        current_app.logger.error(f"IndexError in conversation: {str(e)}")
+        return jsonify({"error": "Index out of range"}), 500
+    except Exception as e:
+        current_app.logger.error(f"Error in conversation: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# Utility functions for AI feedback and speech synthesis
+async def get_coach_feedback(user_answer, correct_answer, language):
+    # Function to generate AI feedback based on the user's answer
+    if language == "Hindi":
+        prompt = f"""
+                आप एक कोच हैं जो छात्र के उत्तर का संक्षिप्त में मूल्यांकन कर रहे हैं। 'use colloquial hindi', बोलचाल की भाषा हिंदी का प्रयोग करें
+                छात्र को 'आप' के रूप में सम्बोधित करें। छात्र का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}"।                 
+                छात्र के उत्तर को ध्यान से पढ़ें और यह निर्धारित करें कि उत्तर सही है, अधूरा है या गलत। अगर अधूरा है तो अधूरा कहें या गलत है तो गलत कहे और सही उत्तर को सरल शब्दों में समझाएं। ऐसा वाक्य मत बोलो,'उपयोगकर्ता के उत्तर की तुलना सही उत्तर से' 
+                यदि सही है, तो छात्र की प्रशंसा करें और उसे प्रोत्साहन दें। ऐसा वाक्य मत बोलो, 'उपयोगकर्ता को आगे बढ़ने के लिए प्रेरित करना'
+                छात्र को आगे बढ़ने के लिए प्रेरित करें।                
+                """
+    else:
+        prompt = f"""
+                You are a coach who is briefly evaluating the student's answer.
+                Address the student as 'you'. The student's answer is: "{user_answer}". The correct answer is: "{correct_answer}".                 
+                Compare the student's answer to the correct answer and determine if it is correct, incomplete, or wrong. If it is incomplete then say it is incomplete or wrong then say it it wrong, explain the correct answer briefly. Do not say the words which has "*"..' 
+                If it is correct, praise the student and encourage them. Do not say the words which has "*".'
+                Motivate the student to move
+                """
+
+    response = await asyncio.to_thread(llm.invoke, prompt)
+    return response.content
 
 
+async def synthesize_speech(text, language):
+    selected_voice = VOICE_MAPPING["Male"] if language == "Hindi" else "en-IN-PrabhatNeural"
+    speech_config = speechsdk.SpeechConfig(subscription=azure_subscription_key, region=azure_region)
+    speech_config.speech_synthesis_voice_name = selected_voice
+    audio_file_name = str(uuid.uuid4()) + ".mp3"
+    audio_config = speechsdk.audio.AudioOutputConfig(filename=f"static/{audio_file_name}")
+    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+    result = await asyncio.to_thread(speech_synthesizer.speak_text_async(text).get)
+    return audio_file_name if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted else None
 
 
 # Helper function to generate feedback based on the score
