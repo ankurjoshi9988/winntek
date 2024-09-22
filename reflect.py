@@ -490,7 +490,7 @@ async def manage_conversation(product_name):
             score1 = float(score_match.group(2))  # Use group(2) to extract the numeric score
             print(f"Extracted Score: {score1}")
         else:
-            print("Score not found in the response")
+            print("Score not found in response")
 
 
 
