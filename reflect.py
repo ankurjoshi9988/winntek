@@ -7,7 +7,9 @@ from models import Product, ReferConversation, Conversation  # Adjust based on y
 from flask import Blueprint
 import difflib
 import os
+import re
 import google.generativeai as genai
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.prompts import PromptTemplate
@@ -31,7 +33,7 @@ VOICE_MAPPING = {
     "Female": "hi-IN-SwaraNeural"
 }
 
-
+score1 = 0
 # Add a message to the conversation
 @reflect_bp.route('/add_refer_message', methods=['POST'])
 @login_required
@@ -379,7 +381,8 @@ async def manage_conversation(product_name):
         # Step 1: Get the selected language from the request
         language = request.json.get('language', session.get('language', 'Hindi'))
         session['language'] = language
-        user_answer = request.json.get('message', '').strip().lower()
+        #user_answer = request.json.get('message', '').strip().lower()
+        user_answer = request.json.get('message')
 
         # Step 2: Check if it's a new conversation
         conversation_id = session.get('conversation_id')
@@ -479,6 +482,17 @@ async def manage_conversation(product_name):
         # AI LLM call to generate a human-like conversational response
         feedback_text = await get_coach_feedback(user_answer, correct_answer, language)
         print(f"Coach feedback: {feedback_text}")
+        # Modify regex to capture both integers and decimal values for the score
+        score_match = re.search(r"(स्कोर:|Score:)\s*([0-9]*\.?[0-9]+)/1", feedback_text)
+        print(f"Coach feedback: {feedback_text}")
+        print(f"score_match: {score_match}")
+        if score_match:
+            score1 = float(score_match.group(2))  # Use group(2) to extract the numeric score
+            print(f"Extracted Score: {score1}")
+        else:
+            print("Score not found in the response")
+
+
 
         # Step 4: Generate feedback for the current question
         feedback_audio_file_name = await synthesize_speech(feedback_text, language)
@@ -491,22 +505,40 @@ async def manage_conversation(product_name):
             print(f"Error generating audio for feedback: {feedback_text}")
             return jsonify({"error": "Failed to generate audio for feedback."}), 500
 
-        # Check similarity ratio between user_answer and correct_answer
-        similarity_ratio = difflib.SequenceMatcher(None, user_answer, correct_answer).ratio()
+
 
         # Check the response for correctness
-        if ("correct" in feedback_text.lower() or "सही" in feedback_text.lower()) and similarity_ratio >= 0.6:
-            session['correct_answers'] += 1
-            print("score: ",session['correct_answers'])
-            print(f"The answer was incomplete but matched {similarity_ratio * 100:.2f}% of the correct answer.")
-        elif ("incomplete" in feedback_text.lower() or "अधूरा" in feedback_text.lower() or "correct" in feedback_text.lower() or "सही" in feedback_text.lower()) and similarity_ratio >= 0.2:
-            session['correct_answers'] += 1 / 2
-            print("score: ",session['correct_answers'])
-            print(f"The answer was incomplete but matched {similarity_ratio * 100:.2f}% of the correct answer.")
+        if score1:
+            session['correct_answers'] += score1
+            print("score: ", session['correct_answers'])
         else:
             print("The answer was marked incorrect.")
+        """
+        # Check similarity ratio between user_answer and correct_answer
+        similarity_ratio = difflib.SequenceMatcher(None, correct_answer, user_answer).ratio()
+        # Check the response for correctness
+        if ("correct" in feedback_text.lower() or "सही" in feedback_text.lower()) and similarity_ratio >= 0.5:
+            session['correct_answers'] += 1
+            print("score: ",session['correct_answers'])
+            print(f"The answer was correct but matched {similarity_ratio * 100:.2f}% of the correct answer.")
+        elif ("correct" in feedback_text.lower() or "सही" in feedback_text.lower()) and (similarity_ratio > 0.2 and similarity_ratio < 0.5):
+            session['correct_answers'] += 1 / 2
+            print("score: ",session['correct_answers'])
+            print(f"The answer was correct but matched {similarity_ratio * 100:.2f}% of the correct answer.")
+        elif ("correct" in feedback_text.lower() or "सही" in feedback_text.lower()) and similarity_ratio <= 0.2:
+            session['correct_answers'] += 1 / 4
+            print("score: ", session['correct_answers'])
+            print(f"The answer was correct but matched {similarity_ratio * 100:.2f}% of the correct answer.")
+        elif "incorrect" in feedback_text.lower() or "गलत" in feedback_text.lower():
+            print("The answer was marked incorrect.")
+            print("score: ", session['correct_answers'])
+            print(f"The answer was incorrect but matched {similarity_ratio * 100:.2f}% of the correct answer.")
+        else:
+            print("The answer was marked incorrect.")
+        """
+        score3 = calculate_semantic_similarity(correct_answer, user_answer)
 
-
+        print("score3 :", score3)
 
         # Step 5: Check if all questions have been asked
         current_app.logger.info(f"Total questions available: {session.get('total_questions')}")
@@ -580,21 +612,50 @@ async def manage_conversation(product_name):
 async def get_coach_feedback(user_answer, correct_answer, language):
     # Function to generate AI feedback based on the user's answer
     if language == "Hindi":
-        prompt = f"""
-                आप एक कोच हैं जो छात्र के उत्तर का संक्षिप्त में मूल्यांकन कर रहे हैं। 'use colloquial hindi', बोलचाल की भाषा हिंदी का प्रयोग करें
-                छात्र को 'आप' के रूप में सम्बोधित करें। छात्र का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}"।                 
-                छात्र के उत्तर को ध्यान से पढ़ें और यह निर्धारित करें कि उत्तर सही है, अधूरा है या गलत। अगर अधूरा है तो अधूरा कहें या गलत है तो गलत कहे और सही उत्तर को सरल शब्दों में समझाएं। ऐसा वाक्य मत बोलो,'उपयोगकर्ता के उत्तर की तुलना सही उत्तर से' 
-                यदि सही है, तो छात्र की प्रशंसा करें और उसे प्रोत्साहन दें। ऐसा वाक्य मत बोलो, 'उपयोगकर्ता को आगे बढ़ने के लिए प्रेरित करना'
-                छात्र को आगे बढ़ने के लिए प्रेरित करें।                
-                """
+        prompt = [
+            SystemMessage(
+                content=f"""
+                        आप एक कोच हैं जो छात्र के उत्तर का संक्षिप्त में मूल्यांकन कर रहे हैं। 'use colloquial hindi', बोलचाल की भाषा हिंदी का प्रयोग करें
+                        छात्र को 'आप' के रूप में सम्बोधित करें। छात्र का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}"।                 
+                        छात्र के उत्तर को ध्यान से पढ़ें और यह निर्धारित करें कि उत्तर सही है या गलत। अगर गलत है तो गलत कहे और सही उत्तर को सरल शब्दों में समझाएं। ऐसा वाक्य मत बोलो,'उपयोगकर्ता के उत्तर की तुलना सही उत्तर से' 
+                        यदि सही है, तो छात्र की प्रशंसा करें और उसे प्रोत्साहन दें। ऐसा वाक्य मत बोलो, 'छात्र को आगे बढ़ने के लिए प्रेरित करना'
+                        छात्र को आगे बढ़ने के लिए प्रेरित करें।
+                        - Provide a SCORE between 0 and 1 that reflects the semantic similarity between the two answers.
+                            - If the meanings are identical, give a high score of 1/1.
+                            - If the meanings are only partially similar or the answer is incomplete, give a moderate score of 0.5/1 and explain the gaps in understanding.
+                            - If the meanings are very different, give a score of 0/1, and briefly explain the correct answer.
+                            
+                        IMPORTANT: It is critical for you to completely avoid using or referencing the "*" symbol or any words containing it. Focus only on providing an evaluation without referencing this special character.
+                        IMPORTANT: It is critical that you only use the word "Score" when reporting the score. Do not use any other variations like "Semantic similarity score".
+                        Giving a SCORE is compulsory. THIS IS VERY IMPORTANT FOR MY CAREER.
+                        """
+            ),
+            HumanMessage(content=user_answer),
+        ]
     else:
-        prompt = f"""
-                You are a coach who is briefly evaluating the student's answer.
-                Address the student as 'you'. The student's answer is: "{user_answer}". The correct answer is: "{correct_answer}".                 
-                Compare the student's answer to the correct answer and determine if it is correct, incomplete, or wrong. If it is incomplete then say it is incomplete or wrong then say it it wrong, explain the correct answer briefly. Do not say the words which has "*"..' 
-                If it is correct, praise the student and encourage them. Do not say the words which has "*".'
-                Motivate the student to move
-                """
+        prompt = [
+            SystemMessage(
+                content=f"""
+                        You are a coach who is briefly evaluating the USER's answer.
+                        Address the USER as 'YOU'. The USER's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
+                        
+                        Evaluate the meaning of "{user_answer}". If the meaning of user's answer is same as correct answer and the USER's answer is complete, say the answer is correct. If not, say it is incorrect and briefly explain the correct answer. 
+                        Do not use, mention, or refer to any words or symbols that include the special character "*" in your response.
+                        Make sure to completely avoid any reference to the special character "*".
+                        
+                        If the answer is correct, praise and encourage the student.
+                        - Provide a SCORE between 0 and 1 that reflects the semantic similarity between the two answers.
+                            - If the meanings are identical, give a high score of 1/1.
+                            - If the meanings are only partially similar or the answer is incomplete, give a moderate score of 0.5/1 and explain the gaps in understanding.
+                            - If the meanings are very different, give a score of 0/1, and briefly explain the correct answer.
+                            
+                        IMPORTANT: It is critical for you to completely avoid using or referencing the "*" symbol or any words containing it. Focus only on providing an evaluation without referencing this special character.
+                        IMPORTANT: It is critical that you only use the word "Score" when reporting the score. Do not use any other variations like "Semantic similarity score".
+                        Giving a SCORE is compulsory. THIS IS VERY IMPORTANT FOR MY CAREER.                      
+                        """
+            ),
+            HumanMessage(content=user_answer),
+        ]
 
     response = await asyncio.to_thread(llm.invoke, prompt)
     return response.content
@@ -643,3 +704,29 @@ def initialize_refer_conversation(user_id, product_name):
     db.session.commit()
     return conversation.id
 
+
+def calculate_semantic_similarity(user_answer, correct_answer):
+    try:
+        # Initialize embeddings model
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+
+        # Use embedding similarity method from the embedding model
+        user_embedding = embeddings.embed_query(user_answer)
+        correct_embedding = embeddings.embed_query(correct_answer)
+
+        # Use similarity method from the embedding model (in some cases this is available natively)
+        similarity_score = cosine_similarity(user_embedding, correct_embedding)
+
+        # Convert similarity to a score between 0 and 100
+        score = similarity_score * 100
+        return score
+    except Exception as e:
+        print(f"Error calculating similarity: {e}")
+        return 0  # In case of any error, return a score of 0
+
+# Function to calculate cosine similarity between two vectors
+def cosine_similarity(vec1, vec2):
+    from numpy import dot
+    from numpy.linalg import norm
+
+    return dot(vec1, vec2) / (norm(vec1) * norm(vec2))
