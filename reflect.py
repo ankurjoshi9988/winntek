@@ -482,8 +482,11 @@ async def manage_conversation(product_name):
         # AI LLM call to generate a human-like conversational response
         feedback_text = await get_coach_feedback(user_answer, correct_answer, language)
         print(f"Coach feedback: {feedback_text}")
+        # Remove any asterisks from the feedback text
+        cleaned_feedback_text = feedback_text.replace('*', '')
+        print(f"cleaned_feedback_text: {cleaned_feedback_text}")
         # Modify regex to capture both integers and decimal values for the score
-        score_match = re.search(r"(स्कोर:|Score:)\s*([0-9]*\.?[0-9]+)/1", feedback_text)
+        score_match = re.search(r"(स्कोर:|Score:)\s*([0-9]*\.?[0-9]+)/1", cleaned_feedback_text)
         print(f"Coach feedback: {feedback_text}")
         print(f"score_match: {score_match}")
         if score_match:
@@ -615,19 +618,16 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         prompt = [
             SystemMessage(
                 content=f"""
-                        आप एक कोच हैं जो छात्र के उत्तर का संक्षिप्त में मूल्यांकन कर रहे हैं। 'use colloquial hindi', बोलचाल की भाषा हिंदी का प्रयोग करें
-                        छात्र को 'आप' के रूप में सम्बोधित करें। छात्र का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}"।                 
-                        छात्र के उत्तर को ध्यान से पढ़ें और यह निर्धारित करें कि उत्तर सही है या गलत। अगर गलत है तो गलत कहे और सही उत्तर को सरल शब्दों में समझाएं। ऐसा वाक्य मत बोलो,'उपयोगकर्ता के उत्तर की तुलना सही उत्तर से' 
-                        यदि सही है, तो छात्र की प्रशंसा करें और उसे प्रोत्साहन दें। ऐसा वाक्य मत बोलो, 'छात्र को आगे बढ़ने के लिए प्रेरित करना'
-                        छात्र को आगे बढ़ने के लिए प्रेरित करें।
-                        - Provide a SCORE between 0 and 1 that reflects the semantic similarity between the two answers.
-                            - If the meanings are identical, give a high score of 1/1.
-                            - If the meanings are only partially similar or the answer is incomplete, give a moderate score of 0.5/1 and explain the gaps in understanding.
-                            - If the meanings are very different, give a score of 0/1, and briefly explain the correct answer.
-                            
-                        IMPORTANT: It is critical for you to completely avoid using or referencing the "*" symbol or any words containing it. Focus only on providing an evaluation without referencing this special character.
-                        IMPORTANT: It is critical that you only use the word "Score" when reporting the score. Do not use any other variations like "Semantic similarity score".
-                        Giving a SCORE is compulsory. THIS IS VERY IMPORTANT FOR MY CAREER.
+                        आप एक insurance के विशेषज्ञ कोच हैं हैं जो user के उत्तर का मूल्यांकन कर रहे हैं। 'use colloquial hindi', बोलचाल की भाषा हिंदी का प्रयोग करें
+                        user को 'आप' के रूप में सम्बोधित करें। user का उत्तर है: "{user_answer}". सही उत्तर है: "{correct_answer}"।
+                        IMPORTANT: Giving a SCORE is compulsory. THIS IS VERY IMPORTANT FOR MY CAREER. 
+                        user के उत्तर की तुलना सही उत्तर से करें, दो बार सोचें और फिर यह निर्धारित करें कि यह सही है, अधूरा है या गलत। 0 से 1 के बीच का स्कोर दें जो दोनों उत्तरों के अर्थ की समानता को दर्शाता हो।               
+                        यदि दोनों उत्तरों के अर्थ एक जैसे हैं, तो user की प्रशंसा करें और उसे प्रोत्साहन दें। और user को आगे बढ़ने के लिए प्रेरित करें। और 1/1 का उच्च स्कोर दें। 
+                        यदि अर्थ केवल आंशिक रूप से समान है या उत्तर अधूरा है, तो सही उत्तर को और समझ में आई कमी को समझाएं। user को आगे बढ़ने के लिए प्रेरित करें। उत्तर में से कम से कम 2 जरूरी शब्द हों तो और आंशिक रूप से समान है, तो 0.5/1 का मध्यम स्कोर दें।
+                        यदि अर्थ बिल्कुल गलत हैै, तो सही उत्तर को और समझ में आई कमी को समझाएं। user को आगे बढ़ने के लिए प्रेरित करें। और 0/1 का स्कोर दें।                     
+                
+                        It is critical that you only use the word 'Score' when reporting the score. Do not use any other variations like 'Semantic similarity score'.
+                        
                         """
             ),
             HumanMessage(content=user_answer),
@@ -636,21 +636,21 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         prompt = [
             SystemMessage(
                 content=f"""
-                        You are a coach who is briefly evaluating the USER's answer.
+                        You are a coach who is evaluating the USER's answer.
                         Address the USER as 'YOU'. The USER's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
                         
-                        Evaluate the meaning of "{user_answer}". If the meaning of user's answer is same as correct answer and the USER's answer is complete, say the answer is correct. If not, say it is incorrect and briefly explain the correct answer. 
+                        Evaluate the meaning of "{user_answer}". If the meaning of user's answer is same as correct answer and the USER's answer is complete, say the answer is correct. If not, say it is incorrect and briefly explain the correct answer and motivate the user to continue. 
                         Do not use, mention, or refer to any words or symbols that include the special character "*" in your response.
                         Make sure to completely avoid any reference to the special character "*".
                         
-                        If the answer is correct, praise and encourage the student.
+                        If the answer is correct, praise and encourage the user.
                         - Provide a SCORE between 0 and 1 that reflects the semantic similarity between the two answers.
                             - If the meanings are identical, give a high score of 1/1.
                             - If the meanings are only partially similar or the answer is incomplete, give a moderate score of 0.5/1 and explain the gaps in understanding.
                             - If the meanings are very different, give a score of 0/1, and briefly explain the correct answer.
                             
                         IMPORTANT: It is critical for you to completely avoid using or referencing the "*" symbol or any words containing it. Focus only on providing an evaluation without referencing this special character.
-                        IMPORTANT: It is critical that you only use the word "Score" when reporting the score. Do not use any other variations like "Semantic similarity score".
+                        IMPORTANT: It is critical that you only use the word "Score" when reporting the score. Do not use any other variations like "Semantic similarity score", "**score:**".
                         Giving a SCORE is compulsory. THIS IS VERY IMPORTANT FOR MY CAREER.                      
                         """
             ),
