@@ -222,6 +222,10 @@ function handleConversationResponse(response) {
 				alert('Please select a product');
 				return;
 			}
+			
+			// Clear any existing conversation ID or session data
+			//sessionStorage.removeItem('conversation_id');
+			//conversationId = null;
 
 			$('#startConversation').prop('disabled', true);
 
