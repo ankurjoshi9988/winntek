@@ -30,8 +30,8 @@ jobs:
         uses: azure/docker-login@v1
         with:
           login-server: prowinn.azurecr.io
-          username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
-          password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+          username: ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_PASSWORD }}
 
       # Push Docker image push
       - name: Push Docker image
@@ -47,7 +47,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.NEWAZURE_CREDENTIALS }}
             
       # Configure Azure Web App Container
       - name: Configure Azure Web App Container
@@ -57,8 +57,8 @@ jobs:
             --resource-group ProWinn-SG \
             --docker-custom-image-name prowinn.azurecr.io/pitchmain:latest \
             --docker-registry-server-url https://prowinn.azurecr.io \
-            --docker-registry-server-user ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }} \
-            --docker-registry-server-password ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+            --docker-registry-server-user ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_USERNAME }} \
+            --docker-registry-server-password ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_PASSWORD }}
 
       # Deploy to Azure Web App for Containers
       - name: Deploy to Azure Web App for Containers
