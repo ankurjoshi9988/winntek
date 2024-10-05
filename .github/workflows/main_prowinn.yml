@@ -1,0 +1,70 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+name: Build and deploy Python app to Azure Web App - ProWinn
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build Docker image
+      - name: Build Docker image
+        run: docker build -t pitchmain:latest .
+
+      # Tag Docker image
+      - name: Tag Docker image
+        run: docker tag pitchmain:latest prowinn.azurecr.io/pitchmain:latest
+
+      # Login to Azure Container Registries
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: prowinn.azurecr.io
+          username: ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_PASSWORD }}
+
+      # Push Docker image push
+      - name: Push Docker image
+        run: docker push prowinn.azurecr.io/pitchmain:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - uses: actions/checkout@v4
+      # Login to Azure
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.NEWAZURE_CREDENTIALS }}
+            
+      # Configure Azure Web App Container
+      - name: Configure Azure Web App Container
+        run: |
+          az webapp config container set \
+            --name PitchMain \
+            --resource-group ProWinn-SG \
+            --docker-custom-image-name prowinn.azurecr.io/pitchmain:latest \
+            --docker-registry-server-url https://prowinn.azurecr.io \
+            --docker-registry-server-user ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_USERNAME }} \
+            --docker-registry-server-password ${{ secrets.NEWAZURE_CONTAINER_REGISTRY_PASSWORD }}
+
+      # Deploy to Azure Web App for Containers
+      - name: Deploy to Azure Web App for Containers
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'PitchMaster'
+          images: prowinn.azurecr.io/pitchmain:latest
+          resource-group: 'ProWinn-SG'
+          slot-name: 'production'
