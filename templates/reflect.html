@@ -504,7 +504,7 @@ function startVoiceRecognition() {
         stopButtonTimeout = setTimeout(function () {
             console.log("No action for 5 seconds after pause, stopping voice recognition automatically.");
             stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
-        }, 5000); // 5 seconds timeout for both mobile and non-mobile
+        }, 6000); // 6 seconds timeout for both mobile and non-mobile
     };
 
     recognition.onend = function () {
