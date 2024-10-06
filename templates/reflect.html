@@ -478,7 +478,7 @@ function startVoiceRecognition() {
     recognition = new webkitSpeechRecognition();
     recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';
     recognition.interimResults = false;
-    recognition.continuous = true; // Keep recognition running until stopped manually
+    recognition.continuous = true;
 
     recognition.onstart = function () {
         isRecognitionActive = true;
@@ -490,42 +490,37 @@ function startVoiceRecognition() {
 
     recognition.onresult = function (event) {
         let currentTranscript = event.results[event.results.length - 1][0].transcript.trim();
-        accumulatedTranscript += currentTranscript + " ";
+        accumulatedTranscript += currentTranscript + " "; // Accumulate transcript with a space
         console.log("Accumulated Transcript:", accumulatedTranscript);
 
         // Clear any existing timeout to auto-stop recognition
         clearTimeout(stopButtonTimeout);
+
+        // Reset the inactivity timer after receiving a new result
+        resetInactivityTimer();
     };
 
     recognition.onspeechend = function () {
-        console.log("Speech has ended, restarting recognition to handle pauses...");
-
-        // Instead of stopping, restart recognition automatically
-        if (!isManuallyStopped) {
-            recognition.stop(); // Stop current instance before restarting
-            setTimeout(() => {
-                if (!isManuallyStopped) {
-                    console.log("Restarting speech recognition...");
-                    recognition.start();
-                }
-            }, 500); // Restart after a short delay
-        }
+        // Speech ended, but do not process yet, wait for the final stop command
+        console.log("Speech ended, waiting for user to continue or manually stop...");
+        
+        // Start a timeout to automatically stop if no more speech is detected
+        stopButtonTimeout = setTimeout(function () {
+            console.log("No action for 5 seconds after speech ended, stopping voice recognition automatically.");
+            stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
+        }, 5000); // 5 seconds timeout
     };
 
     recognition.onend = function () {
-        if (!isManuallyStopped) {
-            console.log("Voice recognition automatically paused or stopped.");
+        if (!isManuallyStopped && isRecognitionActive) {
+            console.log("Recognition ended unexpectedly, restarting automatically...");
 
-            // Start a timer to stop recognition automatically if the user doesn't click stop within 5 seconds
-            stopButtonTimeout = setTimeout(function () {
-                console.log("No action for 5 seconds after pause, stopping voice recognition automatically.");
-                stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
-            }, 5000); // 5 seconds timeout
+            // Restart recognition automatically if it ends unexpectedly, unless it was a manual stop
+            recognition.start();
         } else {
-            console.log("Voice recognition manually stopped.");
+            console.log("Voice recognition manually stopped or process completed.");
         }
 
-        // Do not reset isRecognitionActive here; let stopVoiceRecognition handle it.
         // Reset UI elements
         $('#startVoice').text('Start Voice Recognition');
         $('#stopVoice').prop('disabled', true);
@@ -565,6 +560,18 @@ function stopVoiceRecognition(isManual) {
         $('#startVoice').text('Start Voice Recognition');
         $('#stopVoice').prop('disabled', true);
     }
+}
+
+// Helper function to reset the inactivity timer
+function resetInactivityTimer() {
+    // Clear any existing timeout
+    clearTimeout(stopButtonTimeout);
+    
+    // Start a new timeout for inactivity
+    stopButtonTimeout = setTimeout(function () {
+        console.log("No action for 5 seconds after pause, stopping voice recognition automatically.");
+        stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
+    }, 5000); // 5 seconds timeout
 }
 
 
