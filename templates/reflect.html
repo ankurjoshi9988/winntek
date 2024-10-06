@@ -457,15 +457,15 @@ function handleNextButtonClick() {
 		
 		
 // Global Variables
-// Global variables
+// Global Variables
 let recognition;
 let isRecognitionActive = false;
 let isPlayingAudio = false; // Track if audio is currently playing
 let accumulatedTranscript = ""; // To store the accumulated transcript
-let stopButtonTimeout; // Timeout variable for auto-stop
+let stopButtonTimeout; // Declare a global timeout variable to manage the pause behavior
 let isManuallyStopped = false;
 
-// Function to start voice recognition
+// Start Voice Recognition Function
 function startVoiceRecognition() {
     if (isRecognitionActive || isPlayingAudio) {
         console.log("Voice recognition or audio is already active.");
@@ -476,14 +476,14 @@ function startVoiceRecognition() {
     recognition = new webkitSpeechRecognition();
     recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';
     recognition.interimResults = false;
-    recognition.continuous = true; // Set to true to keep recognition running
+    recognition.continuous = true;
 
     recognition.onstart = function () {
         isRecognitionActive = true;
-        isManuallyStopped = false;
+        isManuallyStopped = false; // Reset manual stop flag at the start
         console.log("Voice recognition active.");
         $('#startVoice').text('Listening...');
-        $('#stopVoice').prop('disabled', false);
+        $('#stopVoice').prop('disabled', false); // Enable the Stop button
     };
 
     recognition.onresult = function (event) {
@@ -491,46 +491,40 @@ function startVoiceRecognition() {
         accumulatedTranscript += currentTranscript + " ";
         console.log("Accumulated Transcript:", accumulatedTranscript);
 
-        // Clear any existing auto-stop timeout when receiving new input
+        // Clear any existing timeout to auto-stop recognition
         clearTimeout(stopButtonTimeout);
-
-        // Set a new auto-stop timeout (e.g., 10 seconds)
-        stopButtonTimeout = setTimeout(function () {
-            console.log("No action for 10 seconds, stopping voice recognition automatically.");
-            stopVoiceRecognition(false);
-        }, 10000); // 10 seconds timeout
     };
 
     recognition.onspeechend = function () {
-        console.log("Speech ended, waiting for user to continue or manually stop...");
-        
-        // Instead of stopping immediately, let the system wait for more input or user action
-        clearTimeout(stopButtonTimeout); // Clear existing timeout
+        // For mobile devices, only allow manual stop
+        if (isMobileDevice()) {
+            console.log("Auto stop disabled on mobile devices.");
+            return;
+        }
+
+        // Start a timer to stop recognition automatically if the user doesn't click stop within 5 seconds
         stopButtonTimeout = setTimeout(function () {
-            console.log("No input after pause, stopping voice recognition automatically.");
-            stopVoiceRecognition(false);
-        }, 10000); // 10 seconds timeout after pause
+            console.log("No action for 5 seconds after pause, stopping voice recognition automatically.");
+            stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
+        }, 5000); // 5 seconds timeout for all devices
     };
 
     recognition.onend = function () {
-        if (!isManuallyStopped) {
-            console.log("Speech recognition stopped automatically.");
-            // Do not reset UI immediately. Wait for the timeout or user manual stop.
+        if (isRecognitionActive && !isManuallyStopped) {
+            console.log("No input after pause, stopping voice recognition automatically.");
+            stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
         } else {
             console.log("Voice recognition manually stopped.");
         }
 
-        isRecognitionActive = false;
-        isManuallyStopped = false; // Reset manual stop flag
-
-        // If recognition ended, update the UI accordingly
+        // Reset UI elements
         $('#startVoice').text('Start Voice Recognition');
         $('#stopVoice').prop('disabled', true);
     };
 
     recognition.onerror = function (event) {
         console.error("Speech recognition error: " + event.error);
-        isRecognitionActive = false;
+        isRecognitionActive = false; // Reset flag
         $('#startVoice').text('Start Voice Recognition');
         $('#stopVoice').prop('disabled', true);
     };
@@ -538,31 +532,36 @@ function startVoiceRecognition() {
     recognition.start();
 }
 
-// Function to stop voice recognition (manual or automatic)
+// Define Stop Voice Recognition Function
 function stopVoiceRecognition(isManual) {
     if (recognition && isRecognitionActive) {
-        isManuallyStopped = isManual;
+        isManuallyStopped = isManual; // Set manual stop flag
         console.log(isManual ? "Manually stopping voice recognition..." : "Automatically stopping voice recognition...");
 
         recognition.stop(); // Stop recognition
-        isRecognitionActive = false;
+        isRecognitionActive = false; // Set active flag to false after stopping
 
-        // Clear any pending auto-stop timeout
+        // Clear any pending timeout to prevent unexpected auto stop after a manual stop
         clearTimeout(stopButtonTimeout);
 
         if (accumulatedTranscript.trim() !== "") {
-            // Append the user's accumulated response
+            // Display accumulated transcript
             appendUserAnswer(accumulatedTranscript.trim());
+            // Send to backend
             sendUserMessage(accumulatedTranscript.trim());
-            accumulatedTranscript = ""; // Clear for next use
+            accumulatedTranscript = ""; // Clear transcript for next use
         }
 
-        // Update UI
+        // Reset UI elements
         $('#startVoice').text('Start Voice Recognition');
         $('#stopVoice').prop('disabled', true);
     }
 }
 
+// Helper function to detect mobile devices
+function isMobileDevice() {
+    return /Mobi|Android/i.test(navigator.userAgent);
+}
 
 // Helper function to reset the inactivity timer
 function resetInactivityTimer() {
