@@ -466,51 +466,18 @@ let stopButtonTimeout; // Declare a global timeout variable to manage the pause 
 let isManuallyStopped = false;
 recognition = new webkitSpeechRecognition();
 
-function isMobileDevice() {
-    return /Mobi|Android/i.test(navigator.userAgent);
-}
-
-// Update the onend event of speech recognition to handle different behavior for mobile and desktop
-recognition.onend = function () {
-    if (!isManuallyStopped && isRecognitionActive) {
-        console.log("Voice recognition automatically paused or stopped.");
-
-        // For mobile devices, only allow manual stop
-        if (isMobileDevice()) {
-            console.log("Auto stop disabled on mobile devices.");
-            return; // Do not trigger auto stop for mobile devices
-        }
-
-        // Start a timer to stop recognition automatically if the user doesn't click stop within 5 seconds (desktop only)
-        stopButtonTimeout = setTimeout(function () {
-            console.log("No action for 5 seconds after pause, stopping voice recognition automatically.");
-            stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
-        }, 5000); // 5 seconds timeout
-    } else {
-        console.log("Voice recognition manually stopped.");
-    }
-
-    // Do not reset isRecognitionActive here; let stopVoiceRecognition handle it.
-    // Reset UI elements
-    $('#startVoice').text('Start Voice Recognition');
-    $('#stopVoice').prop('disabled', true);
-};
-
-
-// Start Voice Recognition Function
+//Start Voice Recognition Function
 function startVoiceRecognition() {
-    // Prevent overlapping recognition or playing audio
     if (isRecognitionActive || isPlayingAudio) {
         console.log("Voice recognition or audio is already active.");
         return;
     }
 
     console.log("Voice recognition started...");
-    
+    recognition = new webkitSpeechRecognition();
     recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';
     recognition.interimResults = false;
-	recognition.continuous = true;
-
+    recognition.continuous = true;
 
     recognition.onstart = function () {
         isRecognitionActive = true;
@@ -525,9 +492,36 @@ function startVoiceRecognition() {
         accumulatedTranscript += currentTranscript + " ";
         console.log("Accumulated Transcript:", accumulatedTranscript);
 
-        // Clear any existing timeout to auto-stop recognition (desktop only)
-        if (!isMobileDevice()) {
-            clearTimeout(stopButtonTimeout);
+        // Clear any existing timeout to auto-stop recognition
+        clearTimeout(stopButtonTimeout);
+    };
+
+    // Handle when speech ends (detects a pause in user speaking)
+    recognition.onspeechend = function () {
+        console.log("Speech has ended, allowing a brief pause before stopping...");
+
+        // Start a timer to stop recognition automatically if the user doesn't click stop within 5 seconds
+        stopButtonTimeout = setTimeout(function () {
+            console.log("No action for 5 seconds after pause, stopping voice recognition automatically.");
+            stopVoiceRecognition(false); // Automatically stop if user didn't click 'Stop'
+        }, 5000); // 5 seconds timeout for both mobile and non-mobile
+    };
+
+    recognition.onend = function () {
+        console.log("Speech recognition service disconnected.");
+        if (!isManuallyStopped) {
+            // If it wasn't manually stopped, reset the active status
+            isRecognitionActive = false;
+
+            // Handle transcript and reset UI elements
+            if (accumulatedTranscript.trim() !== "") {
+                appendUserAnswer(accumulatedTranscript.trim());
+                sendUserMessage(accumulatedTranscript.trim());
+                accumulatedTranscript = "";
+            }
+
+            $('#startVoice').text('Start Voice Recognition');
+            $('#stopVoice').prop('disabled', true);
         }
     };
 
@@ -542,6 +536,8 @@ function startVoiceRecognition() {
 }
 
 
+
+// Define Stop Voice Recognition Function
 // Define Stop Voice Recognition Function
 function stopVoiceRecognition(isManual) {
     if (recognition && isRecognitionActive) {
