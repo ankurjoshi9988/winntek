@@ -153,6 +153,9 @@
             <button id="startVoice" onclick="startVoiceRecognition()" disabled>Start Voice Recognition</button>
         </div>
 		<div class="input-box">
+			<button id="stopVoice" onclick="stopVoiceRecognition(true)" disabled>Stop Recognition</button>
+		</div>		
+		<div class="input-box">
 			<button id="nextQuestion" onclick="handleNextButtonClick()" disabled>Next Question</button>
 		</div>
 
@@ -187,7 +190,8 @@
         }
 		
 // Handle conversation response and control flow
-function handleConversationResponse(response) {
+// Updated handleConversationResponse function to ensure user's answer is displayed
+function handleConversationResponse(response, userTranscript) {
     console.log("Full Response Object:", response);
 
     // Create a new conversation group container for each round of conversation
@@ -209,16 +213,21 @@ function handleConversationResponse(response) {
         });
         return;
     }
+	console.log("Accumulated Transcript Before Display:", userTranscript);
+	// Append user's answer from the accumulated transcript if available
+    // Append user's answer if available
+    if (userTranscript && userTranscript.trim()) {
+        const userMessage = $('<div class="message user" style="color: blue;"></div>').text('You: ' + userTranscript.trim());
+        conversationGroup.append(userMessage);
+    }
 
     // Handle feedback response
     if (response.feedback_text) {
         console.log("Handling feedback...");
 
         // Append user's answer if available
-        if (response.user_answer) {
-            const userMessage = $('<div class="message user" style="color: blue;"></div>').text('You: ' + response.user_answer);
-            conversationGroup.append(userMessage);
-        }
+		
+        
 
         // Append correct answer from coach
         const correctAnswerMessage = $('<div class="message correct-answer" style="color: green;"></div>').text('Correct Answer: ' + response.correct_answer);
@@ -236,7 +245,7 @@ function handleConversationResponse(response) {
             $('#nextQuestion').prop('disabled', false);  // Enable "Next Question" button if no audio is present
         }
 
-                // Add a separator after the conversation group for visual distinction
+        // Add a separator after the conversation group for visual distinction
         const separator = $('<hr style="border: 1px solid #ccc; margin: 20px 0;">');
         $('#conversationBox').append(separator);
 
@@ -267,8 +276,8 @@ function handleConversationResponse(response) {
         }
 
         // Add a separator after the next question group for visual distinction
-        const nextQuestionSeparator = $('<hr style="border: 1px solid #ccc; margin: 20px 0;">');
-        $('#conversationBox').append(nextQuestionSeparator);
+        //const nextQuestionSeparator = $('<hr style="border: 1px solid #ccc; margin: 20px 0;">');
+        //$('#conversationBox').append(nextQuestionSeparator);
 
         return;
     }
@@ -278,8 +287,8 @@ function handleConversationResponse(response) {
         console.log("Handling final feedback...");
 
         // Append user's answer if available
-        if (response.user_answer) {
-            const userMessage = $('<div class="message user" style="color: blue;"></div>').text('You: ' + response.user_answer);
+        if (accumulatedTranscript.trim()) {
+            const userMessage = $('<div class="message user" style="color: blue;"></div>').text('You: ' + accumulatedTranscript.trim());
             conversationGroup.append(userMessage);
         }
 
@@ -314,7 +323,6 @@ function handleConversationResponse(response) {
 
 
 
-
 // Ensure only one click event is bound to "Next Question" button
 $(document).ready(function () {
     $('#nextQuestion').off('click').on('click', handleNextButtonClick);
@@ -331,6 +339,8 @@ function handleNextButtonClick() {
         console.log("Next question request is already pending...");
         return;
     }
+
+    console.log("Next Question button clicked.");
 
     isNextQuestionPending = true;
     $('#nextQuestion').prop('disabled', true);
@@ -349,8 +359,14 @@ function handleNextButtonClick() {
         }),
         success: function(response) {
             console.log("Next question response:", response);
+            if (response.next_question_text) {
+                console.log("Next question text exists:", response.next_question_text);
+            } else {
+                console.error("No next question text in response.");
+            }
             handleConversationResponse(response);
             isNextQuestionPending = false; // Reset flag after response
+            console.log("isNextQuestionPending set to false");
         },
         error: function(xhr) {
             console.error('Error requesting next question:', xhr);
@@ -359,6 +375,7 @@ function handleNextButtonClick() {
         }
     });
 }
+
 
 
 
@@ -437,16 +454,19 @@ function handleNextButtonClick() {
                 }
             });
         }
-
-
-
-        // Voice recognition function        
+		
+		
+// Global Variables
+// Global Variables
 let recognition;
 let isRecognitionActive = false;
-let isPlayingAudio = false;  // Track if audio is currently playing
+let isPlayingAudio = false; // Track if audio is currently playing
+let accumulatedTranscript = ""; // To store the accumulated transcript
+let stopButtonTimeout; // Declare a global timeout variable to manage the pause behavior
+let isManuallyStopped = false;
 
+// Start Voice Recognition Function
 function startVoiceRecognition() {
-    // Prevent overlapping recognition or playing audio
     if (isRecognitionActive || isPlayingAudio) {
         console.log("Voice recognition or audio is already active.");
         return;
@@ -454,113 +474,126 @@ function startVoiceRecognition() {
 
     console.log("Voice recognition started...");
     recognition = new webkitSpeechRecognition();
-    recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';  // Set language
-    recognition.interimResults = false;  // Get final results only
-    recognition.continuous = false;  // Stop recognition after the user stops speaking
+    recognition.lang = $('#language').val() === 'Hindi' ? 'hi-IN' : 'en-US';
+    recognition.interimResults = false;
+    recognition.continuous = true;
 
-    // When recognition starts
-    recognition.onstart = function() {
+    recognition.onstart = function () {
         isRecognitionActive = true;
+        isManuallyStopped = false; // Reset manual stop flag at the start
         console.log("Voice recognition active.");
-        $('#startVoice').text('Listening...');  // Update button text
+        $('#startVoice').text('Listening...');
+        $('#stopVoice').prop('disabled', false); // Enable the Stop button
     };
 
-    // When recognition ends
-    recognition.onend = function() {
-        console.log("Voice recognition stopped.");
-        $('#startVoice').text('Start Voice Recognition');  // Reset button text
-        isRecognitionActive = false;
+    recognition.onresult = function (event) {
+        let currentTranscript = event.results[event.results.length - 1][0].transcript.trim();
+        accumulatedTranscript += currentTranscript + " ";
+        console.log("Accumulated Transcript:", accumulatedTranscript);
+
+        // Clear any existing timeout to auto-stop recognition
+        clearTimeout(stopButtonTimeout);
+
+        // Start a new timer to stop after 5 seconds of inactivity
+        startAutoStopTimer();
     };
 
-    // When recognition receives a result
-    recognition.onresult = function(event) {
-        var transcript = event.results[0][0].transcript;
-        console.log("Recognized speech:", transcript);
+    recognition.onend = function () {
+        if (!isManuallyStopped && isRecognitionActive) {
+            console.log("Voice recognition automatically paused or stopped.");
 
-        // Ensure a product is selected
-        var product_name = $('#product').val();
-        if (!product_name) {
-            alert('Please select a product before using voice recognition.');
-            return;
+            // Start a timer to stop recognition automatically if the user doesn't click stop within 5 seconds
+            startAutoStopTimer();
+        } else {
+            console.log("Voice recognition manually stopped.");
         }
 
-        // Ensure the transcript is valid
-        if (!transcript || transcript.trim() === '') {
-            console.error('No valid transcript captured.');
-            $('#conversationBox').append('<div class="message coach">No valid speech recognized. Please try again.</div>');
-            return;
-        }
-
-        // Display the user's answer immediately
-        $('#conversationBox').append(`<div class="message user">You: ${transcript}</div>`);
-
-        // Send the recognized speech to the backend for feedback
-        $.ajax({
-            url: '/reflect/conversation/' + encodeURIComponent(product_name),
-            type: 'POST',
-            headers: {
-                "X-CSRFToken": csrfToken  // Include the CSRF token in the request headers
-            },
-            contentType: 'application/json',
-            data: JSON.stringify({
-                user_transcript: transcript,
-                language: $('#language').val()
-            }),
-            success: function(response) {
-                console.log("Transcript correction response:", response);
-                handleConversationResponse(response);
-
-                // Disable voice recognition until feedback is processed
-                $('#startVoice').prop('disabled', true);
-            },
-            error: function(xhr, status, error) {
-                console.error("Error while correcting transcript:", error);
-
-                // Fallback to sending the original transcript if correction fails
-                $('#conversationBox').append('<div class="message coach">Error processing the recognized speech. Please try again.</div>');
-            }
-        });
+        // Do not reset isRecognitionActive here; let stopVoiceRecognition handle it.
+        // Reset UI elements
+        $('#startVoice').text('Start Voice Recognition');
+        $('#stopVoice').prop('disabled', true);
     };
 
-    // On recognition error
-    recognition.onerror = function(event) {
+    recognition.onerror = function (event) {
         console.error("Speech recognition error: " + event.error);
-        isRecognitionActive = false;  // Reset flag
-        $('#startVoice').text('Start Voice Recognition');  // Reset button text
+        stopVoiceRecognition(false); // Automatically handle error and stop recognition
     };
 
     recognition.start();
 }
 
-
-
-// Stop voice recognition manually when needed
-function stopVoiceRecognition() {
+// Define Stop Voice Recognition Function
+function stopVoiceRecognition(isManual) {
     if (recognition && isRecognitionActive) {
-        console.log("Manually stopping voice recognition...");
-        recognition.stop();
-        isRecognitionActive = false;
-        $('#startVoice').text('Start Voice Recognition');  // Reset button text
+        isManuallyStopped = isManual; // Set manual stop flag
+        console.log(isManual ? "Manually stopping voice recognition..." : "Automatically stopping voice recognition...");
+
+        recognition.stop(); // Stop recognition
+        isRecognitionActive = false; // Set active flag to false after stopping
+
+        // Clear any pending timeout to prevent unexpected auto stop after a manual stop
+        clearTimeout(stopButtonTimeout);
+
+        if (accumulatedTranscript.trim() !== "") {
+            // Display accumulated transcript
+            appendUserAnswer(accumulatedTranscript.trim());
+            // Send to backend
+            sendUserMessage(accumulatedTranscript.trim());
+            accumulatedTranscript = ""; // Clear transcript for next use
+        }
+
+        // Reset UI elements
+        $('#startVoice').text('Start Voice Recognition');
+        $('#stopVoice').prop('disabled', true);
     }
 }
 
+// Define Auto Stop Voice Recognition Function
+function autoStopVoiceRecognition() {
+    if (recognition && isRecognitionActive && !isManuallyStopped) {
+        console.log("Automatically stopping voice recognition after inactivity.");
+        stopVoiceRecognition(false); // Automatically stop
+    }
+}
 
+// Start Auto Stop Timer
+function startAutoStopTimer() {
+    clearTimeout(stopButtonTimeout); // Clear any previous timer
+    stopButtonTimeout = setTimeout(function () {
+        autoStopVoiceRecognition(); // Call auto stop after 5 seconds of inactivity
+    }, 5000); // 5 seconds timeout
+}
 
-// Ensure audio plays sequentially, preventing overlaps
+// Append User Answer Function
+function appendUserAnswer(userAnswer) {
+    if (userAnswer && userAnswer.trim() !== '') {
+        // Create a new conversation group container for displaying the user's answer
+        const conversationGroup = $('<div class="conversation-group"></div>');
+
+        // Append user's answer to the conversation group
+        const userMessage = $('<div class="message user" style="color: blue;"></div>').text('You: ' + userAnswer);
+        conversationGroup.append(userMessage);
+
+        // Append the entire conversation group to the conversation box
+        $('#conversationBox').append(conversationGroup);
+    }
+}
+
+// Ensure Audio Plays Sequentially Function
 function playAudioResponse(audioUrl, callback) {
     if (isRecognitionActive) {
         console.log("Stopping voice recognition before playing audio...");
-        stopVoiceRecognition();  // Ensure recognition is off before audio plays
+        stopVoiceRecognition(true); // Ensure recognition is off before audio plays
     }
 
     isPlayingAudio = true;
     var audioPlayer = new Audio(audioUrl);
     audioPlayer.controls = true;
 
-    audioPlayer.onended = function() {
-        isPlayingAudio = false;  // Reset after audio ends
+    audioPlayer.onended = function () {
+        isPlayingAudio = false; // Reset after audio ends
         if (callback) {
-            callback();  // Call the next step after audio finishes
+            callback(); // Call the next step after audio finishes
         }
     };
 
@@ -590,9 +623,9 @@ function playAudioResponse(audioUrl, callback) {
 			}
 			
 			console.log("Sending payload:", {
-				//conversation_id: conversationId,
-				//message: transcript,
-				//language: $('#language').val()
+				conversation_id: conversationId,
+				user_transcript: transcript,
+				language: $('#language').val()
 			});
 
 
@@ -601,6 +634,7 @@ function playAudioResponse(audioUrl, callback) {
 				type: 'POST',
 				contentType: 'application/json',
 				data: JSON.stringify({
+					conversation_id: conversationId,
 					user_transcript: transcript,  // Send the user transcript (i.e., the answer)
 					language: $('#language').val()
 				}),
@@ -622,7 +656,7 @@ function playAudioResponse(audioUrl, callback) {
 			});
 		}
 
-
+																							
     </script>
 </body>
 </html>

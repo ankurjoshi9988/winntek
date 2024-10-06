@@ -5,15 +5,10 @@ import azure.cognitiveservices.speech as speechsdk
 import asyncio
 from models import Product, ReferConversation, Conversation  # Adjust based on your project structure
 from flask import Blueprint
-import difflib
 import os
-import re
 import google.generativeai as genai
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain.prompts import PromptTemplate
-from langchain.chains.question_answering import load_qa_chain
 from langchain_google_genai import ChatGoogleGenerativeAI
 from flask import current_app
 from conversation_service import start_conversation, add_message, close_conversation, get_past_conversations, start_refer_conversation, add_refer_message, generate_refer_feedback
@@ -24,6 +19,7 @@ from extensions import login_manager, csrf, mail, oauth, db
 reflect_bp = Blueprint('reflect', __name__)
 
 api_key=os.environ['GOOGLE_API_KEY']
+servamapi_key = os.getenv('SERVAM_API_KEY')
 genai.configure(api_key=api_key)
 azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
 azure_region = os.getenv("AZURE_REGION")
@@ -165,12 +161,17 @@ async def manage_conversation(product_name):
 
             # AI Coach greeting and context setting based on selected language
             if session['language'] == "Hindi":
+                """
                 hindi_greetings = [
                     f"नमस्ते! मैं आज आपका कोच हूँ। हम साथ में {product_name} के बारे में आपके ज्ञान को समझेंगे। कोई चिंता की बात नहीं, मैं यहाँ आपकी मदद के लिए हूँ। यह रहा आपका पहला प्रश्न।",
                     f"नमस्कार! आज हम {product_name} के बारे में आपकी समझ का परीक्षण करेंगे। मैं आपके साथ हूँ और हर कदम पर आपका मार्गदर्शन करूंगा। तो, शुरू करते हैं। यहाँ पहला प्रश्न है।",
                     f"आपका स्वागत है! मैं आपका कोच हूँ और आज हम {product_name} से जुड़ी कुछ बातें जानेंगे। आप तैयार हैं? तो चलिए शुरू करते हैं, यह रहा पहला सवाल।",
                     f"नमस्ते! मैं यहाँ हूँ आपकी मदद के लिए, ताकि हम मिलकर {product_name} के बारे में आपकी जानकारी को सुधारें। कोई भी संकोच मत कीजिए, यह रहा आपका पहला प्रश्न।",
                     f"नमस्कार! आज हम {product_name} पर आधारित आपके ज्ञान का मूल्यांकन करेंगे। चिंता मत कीजिए, मैं आपके साथ हूँ। शुरू करते हैं, यह रहा पहला सवाल।"
+                ]
+                """
+                hindi_greetings = [
+                    f"नमस्ते! "
                 ]
                 # Randomly select a greeting
                 coach_greeting = random.choice(hindi_greetings)
