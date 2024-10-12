@@ -310,13 +310,18 @@ async def get_coach_feedback(user_answer, correct_answer, language):
 
                         The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
-                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether "{user_answer}" 
-                        is correct, incomplete, or incorrect.
+                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the meaning of
+                        "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers all the key words 
+                        of "{correct_answer}".                        
 
-                        If the user has given the accurate and complete answer, say that the answer is correct. 
-                        If the user has given a accurate but partial answer, say that the answer is incomplete. 
-                        If the user's answer is not in the correct answer or the meaning is inaccurate, say that the 
-                        answer is incorrect.
+                        If meaning of "{user_answer}" is similar to "{correct_answer}" and covers all key words 
+                        mentioned in the "{correct_answer}", say that the answer is correct.
+                         
+                        If meaning of "{user_answer}" is partially similar to "{correct_answer}" or covers 
+                        partial key words mentioned in the "{correct_answer}", say that the answer is incomplete. 
+                         
+                        If meaning of "{user_answer}" is not at all similar to "{correct_answer}" even if it covers 
+                        any key words mentioned in the "{correct_answer}", say that the answer is incorrect.
 
                         If it is incomplete or incorrect, explain the correct answer briefly and encourage the user 
                         to move forward.
