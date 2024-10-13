@@ -23,8 +23,8 @@ servamapi_key = os.getenv('SERVAM_API_KEY')
 genai.configure(api_key=api_key)
 azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
 azure_region = os.getenv("AZURE_REGION")
-#llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.9)
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True, temperature=0.8)
+llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.2)
+
 
 # Define voice mappings for male and female personas
 VOICE_MAPPING = {
@@ -224,8 +224,7 @@ async def manage_conversation(product_name):
             current_app.logger.info(f"Current question index: {current_question_index}, Correct Answer: {correct_answer}")
 
             prompt = (f"""
-                      Correct only the misspelled or incorrect words in "{user_answer}" taking into account the context 
-                      of '{correct_answer}".
+                      Correct only the misspelled words in "{user_answer}" based on the context of "{correct_answer}".
                       Do not add, remove, or change any other words or phrases beyond correcting spelling errors.                      
                     """)
 
@@ -242,13 +241,12 @@ async def manage_conversation(product_name):
             # Generate feedback for the current question
             feedback_text, score = await get_coach_feedback(user_answer2, correct_answer, language)
 
-            if ("आपका उत्तर सही है" in feedback_text.lower()) or ("your answer is correct" in feedback_text.lower()):
+            # Check the response for correctness
+            if "आपका उत्तर सही है" in feedback_text or "correct" in feedback_text:
                 session['correct_answers'] += 1
 
-            elif ("आपका उत्तर आंशिक रूप से सही है" in feedback_text.lower()) or (
-                    "आपका उत्तर अधूरा है" in feedback_text.lower()) or (
-                    "your answer is partially correct" in feedback_text.lower()):
-                session['correct_answers'] += 0.5
+            elif "आपका उत्तर आंशिक रूप से सही है" in feedback_text or "आपका उत्तर अधूरा है" in feedback_text or "incomplete" in feedback_text:
+                session['correct_answers'] += .5
 
             else:
                 print("The answer was marked incorrect.")
@@ -362,27 +360,22 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         prompt = [
             SystemMessage(
                 content=f"""
-                        You are a professional question paper evaluator evaluating the user's answer. 
-                        Address the user as 'YOU'.
-
-                        The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
-
-                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the accuracy and 
-                        meaning of "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
-                        key concepts of "{correct_answer}".                        
-
-                        If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
-                        concepts and important details, respond with 'your answer is correct'. 
+                        You are a coach who is evaluating the USER's answer.
+                        Address the USER as 'YOU'. The USER's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
                         
-                        If the "{user_answer}" is partially similar in meaning to the "{correct_answer}" and covers 
-                        some key concepts, say 'Your answer is partially correct'. 
+                        Evaluate the meaning of "{user_answer}". If the meaning of user's answer is same as correct answer and the USER's answer is complete, say the answer is correct. If not, say it is incorrect and briefly explain the correct answer and motivate the user to continue. 
+                        Do not use, mention, or refer to any words or symbols that include the special character "*" in your response.
+                        Make sure to completely avoid any reference to the special character "*".
                         
-                        If the "{user_answer}" is not similar in meaning to the "{correct_answer}" and misses
-                        important details, say 'your answer is incorrect'.
-
-
-                        If it is incomplete or incorrect, explain the correct answer briefly and encourage the user 
-                        to move forward.                     
+                        If the answer is correct, praise and encourage the user.
+                        - Provide a SCORE between 0 and 1 that reflects the semantic similarity between the two answers.
+                            - If the meanings are identical, give a high score of 1/1.
+                            - If the meanings are only partially similar or the answer is incomplete, give a moderate score of 0.5/1 and explain the gaps in understanding.
+                            - If the meanings are very different, give a score of 0/1, and briefly explain the correct answer.
+                            
+                        IMPORTANT: It is critical for you to completely avoid using or referencing the "*" symbol or any words containing it. Focus only on providing an evaluation without referencing this special character.
+                        IMPORTANT: It is critical that you only use the word "Score" when reporting the score. Do not use any other variations like "Semantic similarity score", "**score:**".
+                        Giving a SCORE is compulsory. THIS IS VERY IMPORTANT FOR MY CAREER.                      
                         """
             ),
             HumanMessage(content=user_answer),
