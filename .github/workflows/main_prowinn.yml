@@ -53,7 +53,7 @@ jobs:
       - name: Configure Azure Web App Container
         run: |
           az webapp config container set \
-            --name PitchMain \
+            --name ProWinn \
             --resource-group ProWinn-SG \
             --docker-custom-image-name prowinn.azurecr.io/pitchmain:latest \
             --docker-registry-server-url https://prowinn.azurecr.io \
@@ -64,7 +64,7 @@ jobs:
       - name: Deploy to Azure Web App for Containers
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'PitchMaster'
+          app-name: 'ProWinn'
           images: prowinn.azurecr.io/pitchmain:latest
           resource-group: 'ProWinn-SG'
           slot-name: 'production'
