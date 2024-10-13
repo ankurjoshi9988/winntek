@@ -233,18 +233,36 @@ async def manage_conversation(product_name):
             response = await asyncio.to_thread(llm.invoke, prompt)
             user_answer2 = response.content
             current_app.logger.info(f"user_answer 02: {user_answer2}")
+            # Check if the response contains feedback indicating the answer is correct
 
+            # Get feedback and score based on user's answer
+            #feedback, score = await get_coach_feedback(user_answer, correct_answer, language)
 
             # Generate feedback for the current question
-            feedback_text = await get_coach_feedback(user_answer2, correct_answer, language)
+            feedback_text, score = await get_coach_feedback(user_answer2, correct_answer, language)
+
+            # Check the response for correctness
+            if "आपका उत्तर सही है" in feedback_text or "correct" in feedback_text:
+                session['correct_answers'] += 1
+
+            elif "आपका उत्तर आंशिक रूप से सही है" in feedback_text or "आपका उत्तर अधूरा है" in feedback_text or "incomplete" in feedback_text:
+                session['correct_answers'] += .5
+
+            else:
+                print("The answer was marked incorrect.")
+
+            # Update session score based on the feedback
+            session['score'] += score
 
             current_app.logger.info(f"Coach feedback: {feedback_text}")
+            current_app.logger.info(f"Coach Score: {session['correct_answers']}")
 
 
             feedback_audio_file_name = await synthesize_speech(feedback_text, language)
             if not feedback_audio_file_name:
                 print(f"Error generating audio for feedback: {feedback_text}")
                 return jsonify({"error": "Failed to generate audio for feedback."}), 500
+
 
             # Return feedback without proceeding to the next question
             return jsonify({
@@ -260,9 +278,11 @@ async def manage_conversation(product_name):
             # Provide the next question if available
             session['questions_asked'] += 1
             session.modified = True
-            next_question_index = session['questions_asked'] - 1
 
-            if next_question_index >= len(session['shuffled_questions']):
+
+
+            # Enforce the limit of 10 questions
+            if session['questions_asked'] > session['total_questions']:
                 # No more questions available, return final feedback
                 final_score = session['correct_answers']
                 final_feedback = generate_feedback(final_score, session['total_questions'])
@@ -276,6 +296,12 @@ async def manage_conversation(product_name):
                     "conversation_id": conversation_id,
                     "is_final_feedback": True
                 })
+
+            # If more questions are available, serve the next question
+            next_question_index = session['questions_asked'] - 1
+            # Ensure the next question index is valid
+            if next_question_index >= len(session['shuffled_questions']):
+                return jsonify({"error": "No more questions available."}), 400
 
             # Get the next question
             next_question = session['shuffled_questions'][next_question_index]['question']
@@ -305,23 +331,24 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         prompt = [
             SystemMessage(
                 content=f"""
-                        You are a Professional AI Assistant evaluating the user's answer briefly. Use colloquial Hindi 
-                        language. Address the user as 'आप'.
+                        You are a professional question paper evaluator evaluating the user's answer. 
+                        Use professional colloquial Hindi language. Address the user as 'आप'.
 
                         The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
-                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the meaning of
-                        "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers all the key words 
-                        of "{correct_answer}".                        
+                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the accuracy and 
+                        meaning of "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers all the 
+                        key concepts of "{correct_answer}".                        
 
-                        If meaning of "{user_answer}" is similar to "{correct_answer}" and covers all key words 
-                        mentioned in the "{correct_answer}", say that the answer is correct.
-                         
-                        If meaning of "{user_answer}" is partially similar to "{correct_answer}" or covers 
-                        partial key words mentioned in the "{correct_answer}", say that the answer is incomplete. 
-                         
-                        If meaning of "{user_answer}" is not at all similar to "{correct_answer}" even if it covers 
-                        any key words mentioned in the "{correct_answer}", say that the answer is incorrect.
+                        If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
+                        concepts, respond with 'आपका उत्तर सही है'. 
+                        
+                        If the "{user_answer}" is partially similar in meaning to the "{correct_answer}" and covers 
+                        some key concepts but misses important details, say 'आपका उत्तर आंशिक रूप से सही है'. 
+                        
+                        If the "{user_answer}" is not similar in meaning to the "{correct_answer}" or misses critical 
+                        key concepts, say 'आपका उत्तर गलत है'.
+
 
                         If it is incomplete or incorrect, explain the correct answer briefly and encourage the user 
                         to move forward.
@@ -355,7 +382,19 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         ]
 
     response = await asyncio.to_thread(llm.invoke, prompt)
-    return response.content
+
+    # Calculate the similarity score
+    similarity_score = calculate_semantic_similarity(user_answer, correct_answer)
+
+    # Determine score based on similarity thresholds
+    if similarity_score >= 90:
+        score = 1  # Correct answer
+    elif 60 <= similarity_score < 90:
+        score = 0.5  # Incomplete answer
+    else:
+        score = 0  # Incorrect answer
+
+    return response.content, score
 
 
 async def synthesize_speech(text, language):
@@ -370,9 +409,9 @@ async def synthesize_speech(text, language):
 
 
 # Helper function to generate feedback based on the score
-def generate_feedback(correct_answers, total_questions):
-    score_percentage = (correct_answers / total_questions) * 100
-    score = f"Score: {correct_answers}/{total_questions} ({score_percentage:.2f}%)"
+def generate_feedback(score, total_questions):
+    score_percentage = (score / total_questions) * 100
+    score = f"Score: {score}/{total_questions} ({score_percentage:.2f}%)"
 
     if score_percentage >= 90:
         category = "Expert"

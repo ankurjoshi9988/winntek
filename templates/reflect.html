@@ -293,15 +293,15 @@ function handleConversationResponse(response, userTranscript) {
         }
 
         // Append final feedback to the conversation group
-        const finalFeedbackMessage = $('<div class="message feedback" style="color: green;"></div>').text('Final Feedback: ' + response.feedback_text);
+        const finalFeedbackMessage = $('<div class="message feedback" style="color: green;"></div>').text('Final Feedback: ' + response.final_feedback_text);
         conversationGroup.append(finalFeedbackMessage);
 
         // Append the entire conversation group to the conversation box
         $('#conversationBox').append(conversationGroup);
 
         // Play final feedback audio if available
-        if (response.feedback_audio) {
-            playAudioResponse(response.feedback_audio);
+        if (response.final_feedback_audio) {
+            playAudioResponse(response.final_feedback_audio);
         }
         $('#startVoice').prop('disabled', true);  // Disable "Start Voice Recognition" at the end
         $('#nextQuestion').prop('disabled', true);  // Disable "Next Question" button
