@@ -23,7 +23,7 @@ servamapi_key = os.getenv('SERVAM_API_KEY')
 genai.configure(api_key=api_key)
 azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
 azure_region = os.getenv("AZURE_REGION")
-llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.9)
+llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.6)
 #llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True, temperature=0.8)
 
 # Define voice mappings for male and female personas
@@ -371,8 +371,8 @@ async def get_coach_feedback(user_answer, correct_answer,current_question_index,
 
                         The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
-                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the accuracy and 
-                        meaning of "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
+                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the meaning 
+                        of "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
                         key concepts of "{correct_answer}" and ignore grammatical mistakes.                        
 
                         If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
