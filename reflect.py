@@ -224,9 +224,10 @@ async def manage_conversation(product_name):
             current_app.logger.info(f"Current question index: {current_question_index}, Correct Answer: {correct_answer}")
 
             prompt = (f"""
-                      Correct only the misspelled or incorrect words in "{user_answer}" taking into account the context 
-                      of '{correct_answer}".
-                      Do not add, remove, or change any other words or phrases beyond correcting spelling errors.                      
+                      Correct only the misspelled and grammatical mistakes in "{user_answer}" taking into account the 
+                      context of '{correct_answer}".
+                      Do not add, remove, or change any other words or phrases beyond correcting spelling errors. 
+                      Do not add '*' simbols around the corrected words.                     
                     """)
 
 
@@ -338,15 +339,15 @@ async def get_coach_feedback(user_answer, correct_answer, language):
 
                         The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
-                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the accuracy and 
-                        meaning of "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
-                        key concepts of "{correct_answer}".                        
+                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the meaning of 
+                        "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
+                        key concepts of "{correct_answer}" and ignore grammatical mistakes.                        
 
                         If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
-                        concepts and important details, respond with 'आपका उत्तर सही है'. 
+                        concepts, respond with 'आपका उत्तर सही है'. 
                         
                         If the "{user_answer}" is partially similar in meaning to the "{correct_answer}" and covers 
-                        some key concepts but misses important details, say 'आपका उत्तर आंशिक रूप से सही है'. 
+                        some key concepts, say 'आपका उत्तर आंशिक रूप से सही है'. 
                         
                         If the "{user_answer}" is not similar in meaning to the "{correct_answer}" and misses
                         important details, say 'आपका उत्तर गलत है'.
@@ -363,16 +364,16 @@ async def get_coach_feedback(user_answer, correct_answer, language):
             SystemMessage(
                 content=f"""
                         You are a professional question paper evaluator evaluating the user's answer. 
-                        Address the user as 'YOU'.
+                        Use English language. Address the user as 'YOU'.
 
                         The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
                         Compare the "{user_answer}" with the "{correct_answer}" and determine whether the accuracy and 
                         meaning of "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
-                        key concepts of "{correct_answer}".                        
+                        key concepts of "{correct_answer}" and ignore grammatical mistakes.                        
 
                         If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
-                        concepts and important details, respond with 'your answer is correct'. 
+                        concepts, respond with 'your answer is correct'. 
                         
                         If the "{user_answer}" is partially similar in meaning to the "{correct_answer}" and covers 
                         some key concepts, say 'Your answer is partially correct'. 
