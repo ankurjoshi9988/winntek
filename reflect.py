@@ -23,8 +23,8 @@ servamapi_key = os.getenv('SERVAM_API_KEY')
 genai.configure(api_key=api_key)
 azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
 azure_region = os.getenv("AZURE_REGION")
-#llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.9)
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True, temperature=0.8)
+llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.9)
+#llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True, temperature=0.8)
 
 # Define voice mappings for male and female personas
 VOICE_MAPPING = {
@@ -241,7 +241,8 @@ async def manage_conversation(product_name):
             #feedback, score = await get_coach_feedback(user_answer, correct_answer, language)
 
             # Generate feedback for the current question
-            feedback_text, score = await get_coach_feedback(user_answer2, correct_answer, language)
+            feedback_text, score = await get_coach_feedback(user_answer2, correct_answer, current_question_index,
+                                                            language)
 
             if ("आपका उत्तर सही है" in feedback_text.lower()) or ("your answer is correct" in feedback_text.lower()):
                 session['correct_answers'] += 1
@@ -328,7 +329,7 @@ async def manage_conversation(product_name):
 
 
 # Utility functions for AI feedback and speech synthesis
-async def get_coach_feedback(user_answer, correct_answer, language):
+async def get_coach_feedback(user_answer, correct_answer,current_question_index, language):
     # Function to generate AI feedback based on the user's answer
     if language == "Hindi":
         prompt = [
@@ -336,6 +337,8 @@ async def get_coach_feedback(user_answer, correct_answer, language):
                 content=f"""
                         You are a professional question paper evaluator evaluating the user's answer. 
                         Use colloquial Hindi language. Address the user as 'आप'.
+                        
+                        Question is: "{current_question_index}".
 
                         The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
