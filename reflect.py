@@ -23,7 +23,7 @@ servamapi_key = os.getenv('SERVAM_API_KEY')
 genai.configure(api_key=api_key)
 azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
 azure_region = os.getenv("AZURE_REGION")
-llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.6)
+llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.2)
 #llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True, temperature=0.8)
 
 # Define voice mappings for male and female personas
@@ -224,11 +224,9 @@ async def manage_conversation(product_name):
             current_app.logger.info(f"Current question index: {current_question_index}, Correct Answer: {correct_answer}")
 
             prompt = (f"""
-                      Correct only the misspelled and grammatical mistakes in "{user_answer}" taking into account the 
-                      context of '{correct_answer}".
-                      Do not add, remove, or change any other words or phrases beyond correcting spelling errors. 
-                      Do not add '*' simbols around the corrected words.                     
-                    """)
+                      Correct only the misspelled word or grammatical mistakes in "{user_answer}" taking into account
+                      the content of '{correct_answer}".                                         
+                       """)
 
 
             # AI LLM call to generate a human-like conversational response
@@ -241,8 +239,7 @@ async def manage_conversation(product_name):
             #feedback, score = await get_coach_feedback(user_answer, correct_answer, language)
 
             # Generate feedback for the current question
-            feedback_text, score = await get_coach_feedback(user_answer2, correct_answer, current_question_index,
-                                                            language)
+            feedback_text, score = await get_coach_feedback(user_answer2, correct_answer, language)
 
             if ("आपका उत्तर सही है" in feedback_text.lower()) or ("your answer is correct" in feedback_text.lower()):
                 session['correct_answers'] += 1
@@ -329,22 +326,22 @@ async def manage_conversation(product_name):
 
 
 # Utility functions for AI feedback and speech synthesis
-async def get_coach_feedback(user_answer, correct_answer,current_question_index, language):
+async def get_coach_feedback(user_answer, correct_answer, language):
     # Function to generate AI feedback based on the user's answer
     if language == "Hindi":
         prompt = [
             SystemMessage(
                 content=f"""
                         You are a professional question paper evaluator evaluating the user's answer. 
-                        Use colloquial Hindi language. Address the user as 'आप'.
-                        
-                        Question is: "{current_question_index}".
+                        Use colloquial Hindi language. Address the user as 'आप'.                       
 
                         The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
                         Compare the "{user_answer}" with the "{correct_answer}" and determine whether the meaning of 
                         "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
-                        key concepts of "{correct_answer}" and ignore grammatical mistakes.                        
+                        key concepts of "{correct_answer}".
+                        
+                        IGNORE GRAMMATICAL MISTAKES ANS MISSPELLED WORDS WHILE COMPARING.                     
 
                         If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
                         concepts, respond with 'आपका उत्तर सही है'. 
@@ -362,31 +359,33 @@ async def get_coach_feedback(user_answer, correct_answer,current_question_index,
             ),
             HumanMessage(content=user_answer),
         ]
-    else:
+    elif language == "English":
         prompt = [
             SystemMessage(
                 content=f"""
-                        You are a professional question paper evaluator evaluating the user's answer. 
-                        Use English language. Address the user as 'YOU'.
-
-                        The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
-
-                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the meaning 
-                        of "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
-                        key concepts of "{correct_answer}" and ignore grammatical mistakes.                        
-
-                        If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
-                        concepts, respond with 'your answer is correct'. 
+                        You are a professional question paper evaluator evaluating the user's **spoken** answer.            
+                        Address the user as 'YOU'.            
                         
-                        If the "{user_answer}" is partially similar in meaning to the "{correct_answer}" and covers 
-                        some key concepts, say 'Your answer is partially correct'. 
-                        
-                        If the "{user_answer}" is not similar in meaning to the "{correct_answer}" and misses
-                        important details, say 'your answer is incorrect'.
+                        The user's spoken answer (converted to text) is: "{user_answer}".
+                        The correct answer is: "{correct_answer}".
 
+                        Compare the meaning of the user's answer with the correct answer and determine if they are 
+                        similar and if the user's answer covers the **most important key concepts** of the correct 
+                        answer.
+            
+                        IGNORE GRAMMATICAL MISTAKES, FILLER WORDS, NATURAL SPEECH PATTERNS, and MISSPELLED WORDS WHILE 
+                        COMPARING.
 
-                        If it is incomplete or incorrect, explain the correct answer briefly and encourage the user 
-                        to move forward.                     
+                        If the user's answer is **similar to the overall meaning** of the correct answer and covers 
+                        key concepts, respond with 'your answer is correct'. 
+
+                        If the user's answer is partially similar, respond with 'your answer is partially correct'. 
+
+                        If the user's answer is not similar to the correct answer, respond with 'your answer is 
+                        incorrect'.
+
+                        If incomplete or incorrect, briefly explain the gap and encourage the user to move 
+                        forward.                  
                         """
             ),
             HumanMessage(content=user_answer),
