@@ -224,8 +224,8 @@ async def manage_conversation(product_name):
             current_app.logger.info(f"Current question index: {current_question_index}, Correct Answer: {correct_answer}")
 
             prompt = (f"""
-                      Correct only the misspelled word or grammatical mistakes in "{user_answer}" taking into account
-                      the content of '{correct_answer}".                                         
+                      Rectify only the misspelled word or grammatical mistakes in "{user_answer}" taking into account
+                      the context of '{correct_answer}".                                         
                        """)
 
 
@@ -239,7 +239,7 @@ async def manage_conversation(product_name):
             #feedback, score = await get_coach_feedback(user_answer, correct_answer, language)
 
             # Generate feedback for the current question
-            feedback_text, score = await get_coach_feedback(user_answer2, correct_answer, language)
+            feedback_text = await get_coach_feedback(user_answer2, correct_answer, language)
 
             if ("आपका उत्तर सही है" in feedback_text.lower()) or ("your answer is correct" in feedback_text.lower()):
                 session['correct_answers'] += 1
@@ -253,7 +253,7 @@ async def manage_conversation(product_name):
                 print("The answer was marked incorrect.")
 
             # Update session score based on the feedback
-            session['score'] += score
+            #session['score'] += score
 
             current_app.logger.info(f"Coach feedback: {feedback_text}")
             current_app.logger.info(f"Coach Score: {session['correct_answers']}")
@@ -363,36 +363,36 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         prompt = [
             SystemMessage(
                 content=f"""
-                        You are a professional evaluator evaluating the user's answer.            
-                        Address the user as 'YOU'.            
-                        
-                        The user's answer is: "{user_answer}".
-                        The correct answer is: "{correct_answer}".
+                        You are a professional evaluator assessing the user's spoken answer, which has been converted 
+                        into text. Address the user as 'YOU'.
 
-                        Compare the meaning of the user's answer with the correct answer and determine if they are 
-                        similar and if the user's answer covers the **most important key concepts** of the correct 
-                        answer.
-            
-                        IGNORE GRAMMATICAL MISTAKES, FILLER WORDS, NATURAL SPEECH PATTERNS, and MISSPELLED WORDS WHILE 
-                        COMPARING.
+                        The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
-                        If the user's answer is **similar to the overall meaning** of the correct answer and covers 
-                        key concepts, respond with 'your answer is correct'. 
+                        Compare the meaning of the user's answer with the correct answer, focusing on the overall 
+                        meaning and whether the key concepts are accurately conveyed.
 
-                        If the user's answer is partially similar, respond with 'your answer is partially correct'. 
+                        IGNORE GRAMMATICAL MISTAKES, FILLER WORDS, NATURAL SPEECH PATTERNS, and MINOR VARIATIONS 
+                        WHILE COMPARING.
 
-                        If the user's answer is not similar to the correct answer, respond with 'your answer is 
-                        incorrect'.
+                        If the user's answer conveys the overall meaning of the correct answer and includes the key 
+                        concepts, respond with 'your answer is correct'. Minor variations or non-essential differences 
+                        should not affect the evaluation.
 
-                        If incomplete or incorrect, briefly explain the gap and encourage the user to move 
-                        forward.                  
+                        If the user's answer partially conveys the key concepts but is missing some important details, 
+                        respond with 'your answer is partially correct'.
+
+                        If the user's answer significantly deviates from the correct meaning or misses important 
+                        details, respond with 'your answer is incorrect'.
+
+                        If the answer is incomplete or incorrect, briefly explain the gap and encourage the user to 
+                        move forward.       
                         """
             ),
             HumanMessage(content=user_answer),
         ]
 
     response = await asyncio.to_thread(llm.invoke, prompt)
-
+    """
     # Calculate the similarity score
     similarity_score = calculate_semantic_similarity(user_answer, correct_answer)
 
@@ -403,8 +403,9 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         score = 0.5  # Incomplete answer
     else:
         score = 0  # Incorrect answer
+        """
 
-    return response.content, score
+    return response.content
 
 
 async def synthesize_speech(text, language):
