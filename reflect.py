@@ -363,10 +363,10 @@ async def get_coach_feedback(user_answer, correct_answer, language):
         prompt = [
             SystemMessage(
                 content=f"""
-                        You are a professional question paper evaluator evaluating the user's **spoken** answer.            
+                        You are a professional evaluator evaluating the user's answer.            
                         Address the user as 'YOU'.            
                         
-                        The user's spoken answer (converted to text) is: "{user_answer}".
+                        The user's answer is: "{user_answer}".
                         The correct answer is: "{correct_answer}".
 
                         Compare the meaning of the user's answer with the correct answer and determine if they are 
