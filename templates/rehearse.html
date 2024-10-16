@@ -368,13 +368,13 @@
                 $("<p><strong>Location:</strong> " + persona.Location + "</p>").addClass("persona-details").appendTo(detailsWrapper);
                 $("<p><strong>Financial Goals:</strong> " + persona["Financial Goals"] + "</p>").addClass("persona-details").appendTo(detailsWrapper);
                 
-                var hindiButton = $("<button></button>").addClass("select-button").text("Hindi2");
+                var hindiButton = $("<button></button>").addClass("select-button").text("Hindi");
                 hindiButton.click(function() {
                     selectPersona(persona.Name, 'Hindi');
                 });
                 hindiButton.appendTo(detailsWrapper);
 
-                var englishButton = $("<button></button>").addClass("select-button").text("English2");
+                var englishButton = $("<button></button>").addClass("select-button").text("English");
                 englishButton.click(function() {
                     selectPersona(persona.Name, 'English');
                 });

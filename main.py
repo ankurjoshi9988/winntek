@@ -19,6 +19,7 @@ import glob
 import csv
 from knowledge import knowledge_bp
 from reflect import reflect_bp
+from sqlalchemy import func
 
 
 
@@ -428,8 +429,10 @@ logging.basicConfig(level=logging.INFO)
 async def start_conversation1(persona_name):
     print(f"Received request for persona: {persona_name}")
 
-    persona_name = persona_name.lower()  # Convert to lowercase for consistency
+    persona_name = persona_name.strip().lower()  # Convert to lowercase for consistency
     # Initialize or retrieve the conversation
+
+    print(f"lower case persona: {persona_name}")
     conversation_id = session.get('conversation_id')
     print(f"Initial conversation_id: {conversation_id}")
 
@@ -447,10 +450,13 @@ async def start_conversation1(persona_name):
 
     audio_file_name = str(uuid.uuid4()) + ".mp3"
 
-    # Fetch the persona from the database based on the persona_name and current user's ID
-    persona = Persona.query.filter_by(name=persona_name, user_id=current_user.id).first()
-    if not persona:
-        return jsonify({"error": "Persona not found"}), 404  # Return 404 if persona is not found
+    # Convert both persona name from the request and the stored name to lowercase
+    persona = Persona.query.filter(func.lower(Persona.name) == persona_name.lower(),
+                                   Persona.user_id == current_user.id).first()
+
+    personas2 = Persona.query.filter_by(user_id=current_user.id).all()
+    for p in personas2:
+        print(f"Stored persona: {p.name}")
 
     # Extract relevant persona details
     persona_info = {
@@ -612,4 +618,3 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
-
