@@ -14,45 +14,47 @@ from flask import current_app
 from conversation_service import start_conversation, add_message, close_conversation, get_past_conversations, start_refer_conversation, add_refer_message, generate_refer_feedback
 from extensions import login_manager, csrf, mail, oauth, db
 
-# Blueprints
+
+
 reflect_bp = Blueprint('reflect', __name__)
 
-# API Keys from environment
-api_key = os.getenv('GOOGLE_API_KEY')
+api_key=os.environ['GOOGLE_API_KEY']
 servamapi_key = os.getenv('SERVAM_API_KEY')
+genai.configure(api_key=api_key)
 azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
 azure_region = os.getenv("AZURE_REGION")
+llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.2)
+#llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", convert_system_message_to_human=True, temperature=0.8)
 
-# LLM Configuration
-genai.configure(api_key=api_key)
-llm = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True, temperature=0.8)
-
-# Voice mappings for personas
+# Define voice mappings for male and female personas
 VOICE_MAPPING = {
     "Male": "hi-IN-MadhurNeural",
     "Female": "hi-IN-SwaraNeural"
 }
 
-# Route to add refer message to conversation
+score1 = 0
+# Add a message to the conversation
 @reflect_bp.route('/add_refer_message', methods=['POST'])
 @login_required
 def add_refer_message():
+    print(session.get('_csrf_token'))
     data = request.json
-    current_app.logger.info(f"Request Data: {data}")
+    current_app.logger.info(f"Request Data: {data}")  # Log the incoming request
 
     conversation_id = data.get('conversation_id')
     sender = data.get('sender')
     content = data.get('content')
 
     if not conversation_id or not sender or not content:
-        current_app.logger.error("Invalid request: Missing conversation_id, sender, or content")
+        current_app.logger.error(f"Invalid request: conversation_id={conversation_id}, sender={sender}, content={content}")
         return jsonify({'error': 'Invalid request'}), 400
 
     add_message(conversation_id, sender, content)
     return jsonify({'status': 'Message added'}), 200
 
 
-# Route to close refer conversation and generate feedback
+
+# Close the conversation and generate feedback
 @reflect_bp.route('/close_refer_conversation', methods=['POST'])
 @login_required
 async def close_refer_conversation_route():
@@ -63,15 +65,16 @@ async def close_refer_conversation_route():
     if not conversation:
         return jsonify({'error': 'Conversation not found'}), 404
 
-    feedback_content = await generate_refer_feedback(conversation)
+    feedback_content = await generate_refer_feedback(conversation)  # Assuming this generates feedback based on user performance
     return jsonify({'status': 'Conversation closed', 'feedback': feedback_content})
 
 
-# Route to load products for selection
+# Load products for selection
 @reflect_bp.route('/load-products', methods=['GET'])
 @login_required
 def load_products():
     try:
+        # Fetch distinct product names
         products = db.session.query(Product.name).distinct().all()
         product_list = [{"name": product[0]} for product in products]
         return jsonify({"products": product_list})
@@ -79,7 +82,6 @@ def load_products():
         current_app.logger.error(f"Error loading products: {e}")
         return jsonify({"error": "Failed to load products"}), 500
 
-# Function to get questions and answers for the selected product
 def get_product_questions(product_name, language):
     if language == "Hindi":
         products = Product.query.filter_by(name=product_name).with_entities(Product.question_hindi, Product.answer_hindi).all()
@@ -88,16 +90,16 @@ def get_product_questions(product_name, language):
 
     product_questions = []
     product_answers = []
+
     for question, answer in products:
         product_questions.append(question)
         product_answers.append(answer)
 
-    return product_questions, product_answers # Returning two lists, one for questions, one for answers
+    return product_questions, product_answers  # Returning two lists, one for questions, one for answers
 
 
-
-# Function to get the correct answer for a given question
 def get_correct_answer(product_name, current_question, language):
+    """Fetch the correct answer for the given product and question."""
     if language == "Hindi":
         correct_answer_row = Product.query.filter_by(name=product_name, question_hindi=current_question).first()
         if correct_answer_row:
@@ -108,8 +110,7 @@ def get_correct_answer(product_name, current_question, language):
             return correct_answer_row.answer_english
     return None
 
-# Main conversation handler
-# Main conversation handler
+
 @reflect_bp.route('/conversation/<string:product_name>', methods=['POST'])
 @login_required
 async def manage_conversation(product_name):
@@ -190,12 +191,12 @@ async def manage_conversation(product_name):
             # Synthesize and return the first question with audio
             conversation_context = f"{coach_greeting}\n{question_prompt}"
 
-            current_app.logger.info(f"Generating speech for: {conversation_context}")
+            print(f"Generating speech for: {conversation_context}")
             audio_file_name = await synthesize_speech(conversation_context, language)
-            current_app.logger.info(f"Audio file generated: {audio_file_name}")
+            print(f"Audio file generated: {audio_file_name}")
 
             if not audio_file_name:
-                current_app.logger.error(f"Error generating audio for question prompt: {conversation_context}")
+                print(f"Error generating audio for question prompt: {conversation_context}")
                 return jsonify({"error": "Failed to generate audio for the conversation."}), 500
 
             return jsonify({
@@ -204,7 +205,7 @@ async def manage_conversation(product_name):
                 "conversation_id": conversation_id
             })
 
-            # Step 3: Handle actions for an ongoing conversation
+        # Step 3: Handle actions for an ongoing conversation
         if action == 'answer':
             # Provide feedback for the current answer
             if 'shuffled_questions' not in session or 'questions_asked' not in session:
@@ -220,63 +221,55 @@ async def manage_conversation(product_name):
             current_qa_pair = session['shuffled_questions'][current_question_index]
             correct_answer = current_qa_pair['answer']
 
-            current_app.logger.info(
-                f"Current question index: {current_question_index}, Correct Answer: {correct_answer}")
+            current_app.logger.info(f"Current question index: {current_question_index}, Correct Answer: {correct_answer}")
 
-            prompt = [
-                SystemMessage(
-                    content=f"""
-                        You are tasked with correcting **only** the misspelled words, grammatical errors, or mispronounced words in the user's answer. 
+            prompt = (f"""
+                      Rectify only the misspelled word or grammatical mistakes in "{user_answer}" taking into account
+                      the context of '{correct_answer}".                                         
+                       """)
 
-                        **Important Instructions**:
-                        - **Do not change the meaning** or rephrase the sentence.
-                        - **Do not replace the user's original answer with the correct answer**; just correct specific mistakes.
-                        - **Focus on key terms that might be misheard or mispronounced** (e.g., technical terms like "Single Pay", "Limited Pay", "Regular Pay", "Deferment", "Assured Wealth Goal plan", "surrender value", "premiums", "Life Stage", "Sum Assured", "terminal", "lump sum", "Life Shield", "Death Benefit", "Pay" or "Regular" that might be critical to understanding the context).
-                        - Preserve the overall phrasing and structure of the user's original answer as much as possible.
-
-                        Here is the user's answer: "{user_answer}"
-
-                        Compare it with the context of the correct answer: "{correct_answer}"
-
-                        Your job is to:
-                        - Correct only spelling, grammar, and pronunciation errors.
-                        - Ensure important key terms, like product names or financial terms, are correctly spelled (e.g., "Single Pay" should not be changed to "Single Phase").
-
-                        Do not rephrase or restructure the user's original response, but ensure the corrections maintain clarity and accuracy.
-                    """
-                ),
-                HumanMessage(content=user_answer)
-            ]
 
             # AI LLM call to generate a human-like conversational response
             response = await asyncio.to_thread(llm.invoke, prompt)
-            user_answer1 = response.content
-            user_answer2 = user_answer1.replace('*', '')
+            user_answer2 = response.content
             current_app.logger.info(f"user_answer 02: {user_answer2}")
-            current_app.logger.info(f"language: {language}")
+            # Check if the response contains feedback indicating the answer is correct
+
+            # Get feedback and score based on user's answer
+            #feedback, score = await get_coach_feedback(user_answer, correct_answer, language)
 
             # Generate feedback for the current question
             feedback_text = await get_coach_feedback(user_answer2, correct_answer, language)
 
-            # Update session score based on the feedback
-            if "आपका उत्तर सही है" in feedback_text.lower() or "your answer is correct" in feedback_text.lower():
+            if ("आपका उत्तर सही है" in feedback_text.lower()) or ("your answer is correct" in feedback_text.lower()):
                 session['correct_answers'] += 1
-            elif "आपका उत्तर आंशिक रूप से सही है" in feedback_text.lower() or "your answer is partially correct" in feedback_text.lower():
+
+            elif ("आपका उत्तर आंशिक रूप से सही है" in feedback_text.lower()) or (
+                    "आपका उत्तर अधूरा है" in feedback_text.lower()) or (
+                    "your answer is partially correct" in feedback_text.lower()):
                 session['correct_answers'] += 0.5
 
-            session.modified = True  # Ensure session update is persisted
+            else:
+                print("The answer was marked incorrect.")
+
+            # Update session score based on the feedback
+            #session['score'] += score
+
             current_app.logger.info(f"Coach feedback: {feedback_text}")
             current_app.logger.info(f"Coach Score: {session['correct_answers']}")
 
+
             feedback_audio_file_name = await synthesize_speech(feedback_text, language)
             if not feedback_audio_file_name:
-                current_app.logger.error(f"Error generating audio for feedback: {feedback_text}")
+                print(f"Error generating audio for feedback: {feedback_text}")
                 return jsonify({"error": "Failed to generate audio for feedback."}), 500
 
+
+            # Return feedback without proceeding to the next question
             return jsonify({
                 "feedback_text": feedback_text,
                 "feedback_audio": f"/static/{feedback_audio_file_name}",
-                "correct_answer": correct_answer,
+                "correct_answer" : correct_answer,
                 "user_answer2": user_answer2,
                 "conversation_id": conversation_id,
                 "is_final_feedback": False
@@ -285,7 +278,9 @@ async def manage_conversation(product_name):
         elif action == 'next_question':
             # Provide the next question if available
             session['questions_asked'] += 1
-            session.modified = True  # Ensure session update is persisted
+            session.modified = True
+
+
 
             # Enforce the limit of 10 questions
             if session['questions_asked'] > session['total_questions']:
@@ -329,8 +324,9 @@ async def manage_conversation(product_name):
 
 
 
+
 # Utility functions for AI feedback and speech synthesis
-async def get_coach_feedback(user_answer2, correct_answer, language):
+async def get_coach_feedback(user_answer, correct_answer, language):
     # Function to generate AI feedback based on the user's answer
     if language == "Hindi":
         prompt = [
@@ -339,21 +335,21 @@ async def get_coach_feedback(user_answer2, correct_answer, language):
                         You are a professional question paper evaluator evaluating the user's answer. 
                         Use colloquial Hindi language. Address the user as 'आप'.                       
 
-                        The user's answer is: "{user_answer2}". The correct answer is: "{correct_answer}".
+                        The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
-                        Compare the "{user_answer2}" with the "{correct_answer}" and determine whether the meaning of 
-                        "{user_answer2}" and "{correct_answer}" is similar and "{user_answer2}" covers the 
+                        Compare the "{user_answer}" with the "{correct_answer}" and determine whether the meaning of 
+                        "{user_answer}" and "{correct_answer}" is similar and "{user_answer}" covers the 
                         key concepts of "{correct_answer}".
                         
                         IGNORE GRAMMATICAL MISTAKES ANS MISSPELLED WORDS WHILE COMPARING.                     
 
-                        If the "{user_answer2}" is similar in meaning to the "{correct_answer}" and covers most key 
+                        If the "{user_answer}" is similar in meaning to the "{correct_answer}" and covers most key 
                         concepts, respond with 'आपका उत्तर सही है'. 
                         
-                        If the "{user_answer2}" is partially similar in meaning to the "{correct_answer}" and covers 
+                        If the "{user_answer}" is partially similar in meaning to the "{correct_answer}" and covers 
                         some key concepts, say 'आपका उत्तर आंशिक रूप से सही है'. 
                         
-                        If the "{user_answer2}" is not similar in meaning to the "{correct_answer}" and misses
+                        If the "{user_answer}" is not similar in meaning to the "{correct_answer}" and misses
                         important details, say 'आपका उत्तर गलत है'.
 
 
@@ -361,40 +357,55 @@ async def get_coach_feedback(user_answer2, correct_answer, language):
                         to move forward.
                         """
             ),
-            HumanMessage(content=user_answer2),
+            HumanMessage(content=user_answer),
         ]
     elif language == "English":
         prompt = [
             SystemMessage(
                 content=f"""
-                    You are a professional evaluator assessing the user's spoken answer, which has been converted into text.
-                    Your primary goal is to assess whether the user's answer conveys the correct **key concepts** and overall meaning of the correct answer.
+                        You are a professional evaluator assessing the user's spoken answer, which has been converted 
+                        into text. Address the user as 'YOU'.
 
-                    **User's answer**: "{user_answer2}"
-                    **Correct answer**: "{correct_answer}"
+                        The user's answer is: "{user_answer}". The correct answer is: "{correct_answer}".
 
-                    **Important Instructions**:
-                    - Focus on whether the user's answer includes all the key concepts from the correct answer.
-                    - Be lenient with phrasing, wording, or minor structural differences, as long as the overall meaning is the same.
-                    - If the user's answer covers the core concepts, even if phrased differently, respond with 'Your answer is correct'.
-                    - If the user's answer is missing one or two important details, respond with 'Your answer is partially correct' and briefly explain what was missed.
-                    - If the user's answer is significantly incorrect or missing key concepts, respond with 'Your answer is incorrect' and explain what was missed.
+                        Compare the meaning of the user's answer with the correct answer, focusing on the overall 
+                        meaning and whether the key concepts are accurately conveyed.
 
-                    **Evaluation Criteria**:
-                    - Do not penalize for minor variations in how the user phrases their answer, as long as the meaning is clear.
-                    - If the user covers the main points of the correct answer, treat the answer as correct.
+                        IGNORE GRAMMATICAL MISTAKES, FILLER WORDS, NATURAL SPEECH PATTERNS, and MINOR VARIATIONS 
+                        WHILE COMPARING.
 
-                    REMEMBER: Take a deep breath and read the user's answer carefully before responding. Your evaluation will have a significant impact on the user's professional development, so ensure your judgment is fair and lenient where appropriate.
-                """
+                        If the user's answer conveys the overall meaning of the correct answer and includes the key 
+                        concepts, respond with 'your answer is correct'. Minor variations or non-essential differences 
+                        should not affect the evaluation.
+
+                        If the user's answer partially conveys the key concepts but is missing some important details, 
+                        respond with 'your answer is partially correct'.
+
+                        If the user's answer significantly deviates from the correct meaning or misses important 
+                        details, respond with 'your answer is incorrect'.
+
+                        If the answer is incomplete or incorrect, briefly explain the gap and encourage the user to 
+                        move forward.       
+                        """
             ),
-            HumanMessage(content=user_answer2),
+            HumanMessage(content=user_answer),
         ]
 
     response = await asyncio.to_thread(llm.invoke, prompt)
-    response_clean = response.content
-    correct_answer_clean = response_clean.replace('*', '')
+    """
+    # Calculate the similarity score
+    similarity_score = calculate_semantic_similarity(user_answer, correct_answer)
 
-    return correct_answer_clean
+    # Determine score based on similarity thresholds
+    if similarity_score >= 90:
+        score = 1  # Correct answer
+    elif 60 <= similarity_score < 90:
+        score = 0.5  # Incomplete answer
+    else:
+        score = 0  # Incorrect answer
+        """
+
+    return response.content
 
 
 async def synthesize_speech(text, language):
@@ -429,6 +440,10 @@ def generate_feedback(score, total_questions):
     return f"Category: {category}\nFeedback: {feedback_text}"
 
 
+
+
+
+
 # Initialize a new conversation in the database
 def initialize_refer_conversation(user_id, product_name):
     conversation = Conversation(user_id=user_id, persona=product_name)
@@ -437,4 +452,28 @@ def initialize_refer_conversation(user_id, product_name):
     return conversation.id
 
 
+def calculate_semantic_similarity(user_answer, correct_answer):
+    try:
+        # Initialize embeddings model
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
+        # Use embedding similarity method from the embedding model
+        user_embedding = embeddings.embed_query(user_answer)
+        correct_embedding = embeddings.embed_query(correct_answer)
+
+        # Use similarity method from the embedding model (in some cases this is available natively)
+        similarity_score = cosine_similarity(user_embedding, correct_embedding)
+
+        # Convert similarity to a score between 0 and 100
+        score = similarity_score * 100
+        return score
+    except Exception as e:
+        print(f"Error calculating similarity: {e}")
+        return 0  # In case of any error, return a score of 0
+
+# Function to calculate cosine similarity between two vectors
+def cosine_similarity(vec1, vec2):
+    from numpy import dot
+    from numpy.linalg import norm
+
+    return dot(vec1, vec2) / (norm(vec1) * norm(vec2))
