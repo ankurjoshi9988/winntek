@@ -17,7 +17,7 @@ from extensions import login_manager, csrf, mail, oauth, db
 # Blueprints
 reflect_bp = Blueprint('reflect', __name__)
 
-# API Keys from environment
+# API Keys from environment file
 api_key = os.getenv('GOOGLE_API_KEY')
 servamapi_key = os.getenv('SERVAM_API_KEY')
 azure_subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
