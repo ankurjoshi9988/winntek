@@ -12,9 +12,7 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     poppler-utils \
     portaudio19-dev \
-    poppler-utils \
     tesseract-ocr \
-    
     && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
 
 # Set the working directory in the container
@@ -23,17 +21,17 @@ WORKDIR /app
 # Copy only the requirements.txt initially to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies, including OpenCV
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install opencv-python-headless
+    && pip install --no-cache-dir opencv-python-headless
 
-# Now copy the rest of your application files into the container
+# Copy the rest of the application files into the container
 COPY . .
 
 # Verify gunicorn installation
 RUN gunicorn --version
 
-# Make port 8000 available to the world outside this container
+# Expose port 8000 to the outside world
 EXPOSE 8000
 
 # Command to run the application
