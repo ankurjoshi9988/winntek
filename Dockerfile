@@ -4,15 +4,17 @@ FROM python:3.10-slim
 # Install system dependencies, including OpenCV dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
-    portaudio19-dev \
     ghostscript \
-    poppler-utils \
-    tesseract-ocr \
     libglib2.0-0 \
+    libopencv-dev \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    libopencv-dev \
+    poppler-utils \
+    portaudio19-dev \
+    poppler-utils \
+    tesseract-ocr \
+    
     && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
 
 # Set the working directory in the container
