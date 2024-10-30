@@ -1,27 +1,35 @@
 # Use the official Python base image
 FROM python:3.10-slim
 
-# Install system dependencies, including OpenCV dependencies
-RUN apt-get update && apt-get install -y \
+# Install build tools and basic system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     ghostscript \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install OpenCV and image processing dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libopencv-dev \
     libsm6 \
     libxext6 \
     libxrender-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Tesseract and audio processing dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     portaudio19-dev \
     tesseract-ocr \
-    && rm -rf /var/lib/apt/lists/*  # Clean up to reduce image size
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy only the requirements.txt initially to leverage Docker cache
+# Copy only the requirements.txt to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies without cache
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir opencv-python-headless
 
