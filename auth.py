@@ -22,14 +22,13 @@ from dotenv import load_dotenv
 import logging
 import jwt
 
-
 # Setup basic configuration for logging
 logging.basicConfig(level=logging.INFO)
 
 # Load environment variables from .env file
 load_dotenv()
 
-#auth_bp
+# auth_bp
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 def init_auth(oauth_instance):
@@ -108,7 +107,6 @@ def deduct_credit():
         logging.info(f"User {user.username} has no credits left.")
     return jsonify({'credits': user.credits})
 
-
 class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     username = StringField('Username', validators=[DataRequired()])
@@ -136,6 +134,7 @@ def register():
         # Check if the email already exists
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
+            logging.info(f"Attempt to register with existing email: {email}")
             flash('Email address already registered', 'danger')
             return render_template('auth.html', form=form, tab='register')
 
@@ -144,10 +143,12 @@ def register():
         try:
             db.session.add(new_user)
             db.session.commit()
+            logging.info(f"New user registration: {email}, username: {username}")
             flash('Registration successful', 'success')
             return redirect(url_for('auth.login'))
         except IntegrityError:
             db.session.rollback()
+            logging.error("An error occurred during registration.")
             flash('An error occurred during registration. Please try again.', 'danger')
             return render_template('auth.html', form=form, tab='register')
 
@@ -159,9 +160,15 @@ def login():
     next_page = request.args.get('next')
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
-            login_user(user, remember=form.remember.data)
-            return redirect(next_page or url_for('index'))
+        if user:
+            if user.check_password(form.password.data):
+                login_user(user, remember=form.remember.data)
+                logging.info(f"User {user.username} logged in successfully.")
+                return redirect(next_page or url_for('index'))
+            else:
+                logging.warning(f"Invalid password attempt for user {form.username.data}.")
+        else:
+            logging.warning(f"Invalid login attempt for non-existent user {form.username.data}.")
         flash('Invalid username or password', 'danger')
     return render_template('auth.html', form=form, tab='login')
 
@@ -178,8 +185,14 @@ def reset_password_request():
         email = request.form['email']
         user = User.query.filter_by(email=email).first()
         if user:
-            send_reset_email(user)
-        flash('Check your email for the instructions to reset your password', 'info')
+            try:
+                send_reset_email(user)
+                flash('Check your email for the instructions to reset your password', 'info')
+            except Exception as e:
+                logging.error(f"Error sending reset email to {email}: {e}")
+                flash('An error occurred while sending reset email. Please try again.', 'danger')
+        else:
+            flash('Email not found. Please check and try again.', 'danger')
         return redirect(url_for('auth.login'))
     return render_template('auth.html', tab='reset')
 
@@ -218,5 +231,7 @@ If you did not make this request then simply ignore this email and no changes wi
         msg = Message(subject, recipients=[user.email], body=body)
         mail.send(msg)
         logging.info(f"Password reset email sent to {user.email}")
+        flash('Password reset email sent successfully', 'success')  # Include flash message after success
     except Exception as e:
-        logging.error(f"Failed to send password reset email: {e}")
+        logging.error(f"Error in send_reset_email: {e}")
+        flash("An error occurred while sending the email.", 'danger')

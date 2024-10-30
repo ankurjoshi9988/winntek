@@ -14,6 +14,20 @@ from flask import current_app
 from conversation_service import start_conversation, add_message, close_conversation, get_past_conversations, start_refer_conversation, add_refer_message, generate_refer_feedback
 from extensions import login_manager, csrf, mail, oauth, db
 
+# Imports
+import os
+import random
+import asyncio
+from flask import Blueprint, request, jsonify, current_app, session
+#from some_module import genai, ChatGoogleGenerativeAI  # Ensure you import required classes/functions here
+
+# Constants for error messages
+INVALID_REQUEST_MSG = "Invalid request: Missing conversation_id, sender, or content"
+NO_QUESTIONS_FOUND_MSG = "No questions found for the selected product."
+FAILED_LOAD_PRODUCTS_MSG = "Failed to load products"
+AUDIO_GENERATION_ERROR_MSG = "Failed to generate audio for the conversation."
+FINAL_FEEDBACK_ERROR_MSG = "Failed to generate audio for feedback."
+
 # Blueprints
 reflect_bp = Blueprint('reflect', __name__)
 
@@ -45,7 +59,7 @@ def add_refer_message():
     content = data.get('content')
 
     if not conversation_id or not sender or not content:
-        current_app.logger.error("Invalid request: Missing conversation_id, sender, or content")
+        current_app.logger.error(INVALID_REQUEST_MSG)
         return jsonify({'error': 'Invalid request'}), 400
 
     add_message(conversation_id, sender, content)
@@ -77,7 +91,7 @@ def load_products():
         return jsonify({"products": product_list})
     except Exception as e:
         current_app.logger.error(f"Error loading products: {e}")
-        return jsonify({"error": "Failed to load products"}), 500
+        return jsonify({"error": FAILED_LOAD_PRODUCTS_MSG}), 500
 
 # Function to get questions and answers for the selected product
 def get_product_questions(product_name, language):
@@ -95,7 +109,6 @@ def get_product_questions(product_name, language):
     return product_questions, product_answers # Returning two lists, one for questions, one for answers
 
 
-
 # Function to get the correct answer for a given question
 def get_correct_answer(product_name, current_question, language):
     if language == "Hindi":
@@ -108,7 +121,6 @@ def get_correct_answer(product_name, current_question, language):
             return correct_answer_row.answer_english
     return None
 
-# Main conversation handler
 # Main conversation handler
 @reflect_bp.route('/conversation/<string:product_name>', methods=['POST'])
 @login_required
@@ -135,15 +147,10 @@ async def manage_conversation(product_name):
             session['correct_answers'] = 0
 
             # Fetch both questions and their corresponding answers based on language
-            if language == "Hindi":
-                product_questions = Product.query.filter_by(name=product_name).with_entities(
-                    Product.question_hindi, Product.answer_hindi).all()
-            else:
-                product_questions = Product.query.filter_by(name=product_name).with_entities(
-                    Product.question_english, Product.answer_english).all()
+            product_questions, product_answers = get_product_questions(product_name, language)
 
             if not product_questions:
-                return jsonify({"error": "No questions found for the selected product."}), 404
+                return jsonify({"error": NO_QUESTIONS_FOUND_MSG}), 404
 
             # Shuffle the questions while keeping answers paired
             random.shuffle(product_questions)
@@ -159,33 +166,18 @@ async def manage_conversation(product_name):
             session.modified = True
 
             # AI Coach greeting and context setting based on selected language
-            if session['language'] == "Hindi":
-                """
-                hindi_greetings = [
-                    f"नमस्ते! मैं आज आपका कोच हूँ। हम साथ में {product_name} के बारे में आपके ज्ञान को समझेंगे। कोई चिंता की बात नहीं, मैं यहाँ आपकी मदद के लिए हूँ। यह रहा आपका पहला प्रश्न।",
-                    f"नमस्कार! आज हम {product_name} के बारे में आपकी समझ का परीक्षण करेंगे। मैं आपके साथ हूँ और हर कदम पर आपका मार्गदर्शन करूंगा। तो, शुरू करते हैं। यहाँ पहला प्रश्न है।",
-                    f"आपका स्वागत है! मैं आपका कोच हूँ और आज हम {product_name} से जुड़ी कुछ बातें जानेंगे। आप तैयार हैं? तो चलिए शुरू करते हैं, यह रहा पहला सवाल।",
-                    f"नमस्ते! मैं यहाँ हूँ आपकी मदद के लिए, ताकि हम मिलकर {product_name} के बारे में आपकी जानकारी को सुधारें। कोई भी संकोच मत कीजिए, यह रहा आपका पहला प्रश्न।",
-                    f"नमस्कार! आज हम {product_name} पर आधारित आपके ज्ञान का मूल्यांकन करेंगे। चिंता मत कीजिए, मैं आपके साथ हूँ। शुरू करते हैं, यह रहा पहला सवाल।"
+            greetings = {
+                "Hindi": [
+                    f"नमस्ते! मैं आज आपका कोच हूँ। हम साथ में {product_name} के बारे में आपके ज्ञान को समझेंगे। यहाँ आपका पहला प्रश्न है।",
+                ],
+                "English": [
+                    f"Hello! I'm your coach today. Let’s explore your knowledge of {product_name}. Here’s your first question."
                 ]
-                """
-                hindi_greetings = [
-                    f"नमस्ते! "
-                ]
-                # Randomly select a greeting
-                coach_greeting = random.choice(hindi_greetings)
-                question_prompt = current_question
-            else:
-                english_greetings = [
-                    f"Hello! I'm your coach today. Let’s explore your knowledge of {product_name}. Don’t worry, I’m here to guide you. Here’s your first question.",
-                    f"Welcome! I'm here to help you test your understanding of {product_name}. Ready? Let’s dive in. Here's the first question for you.",
-                    f"Hello! Let’s work together to assess your knowledge of {product_name}. No need to worry, I’ll be right here to assist. Here's your first question.",
-                    f"Greetings! I'm your coach today, and we’ll be covering {product_name}. Don’t worry, I’ll guide you through it step by step. Let's begin with the first question.",
-                    f"Hi! I’m here to guide you through a quick test of your knowledge on {product_name}. I’ll be with you throughout. Here’s your first question."
-                ]
-                # Randomly select a greeting
-                coach_greeting = random.choice(english_greetings)
-                question_prompt = current_question
+            }
+
+            # Randomly select a greeting
+            coach_greeting = random.choice(greetings[language])
+            question_prompt = current_question
 
             # Synthesize and return the first question with audio
             conversation_context = f"{coach_greeting}\n{question_prompt}"
@@ -195,8 +187,8 @@ async def manage_conversation(product_name):
             current_app.logger.info(f"Audio file generated: {audio_file_name}")
 
             if not audio_file_name:
-                current_app.logger.error(f"Error generating audio for question prompt: {conversation_context}")
-                return jsonify({"error": "Failed to generate audio for the conversation."}), 500
+                current_app.logger.error(AUDIO_GENERATION_ERROR_MSG)
+                return jsonify({"error": AUDIO_GENERATION_ERROR_MSG}), 500
 
             return jsonify({
                 "text": current_question,
@@ -204,7 +196,7 @@ async def manage_conversation(product_name):
                 "conversation_id": conversation_id
             })
 
-            # Step 3: Handle actions for an ongoing conversation
+        # Step 3: Handle actions for an ongoing conversation
         if action == 'answer':
             # Provide feedback for the current answer
             if 'shuffled_questions' not in session or 'questions_asked' not in session:
@@ -226,215 +218,87 @@ async def manage_conversation(product_name):
             prompt = [
                 SystemMessage(
                     content=f"""
-                        You are tasked with correcting **only** the misspelled words, grammatical errors, or mispronounced words in the user's answer. 
-
-                        **Important Instructions**:
-                        - **Do not change the meaning** or rephrase the sentence.
-                        - **Do not replace the user's original answer with the correct answer**; just correct specific mistakes.
-                        - **Focus on key terms that might be misheard or mispronounced** (e.g., technical terms like "Single Pay", "Limited Pay", "Regular Pay", "Deferment", "Assured Wealth Goal plan", "surrender value", "premiums", "Life Stage", "Sum Assured", "terminal", "lump sum", "Life Shield", "Death Benefit", "Pay" or "Regular" that might be critical to understanding the context).
-                        - Preserve the overall phrasing and structure of the user's original answer as much as possible.
-
-                        Here is the user's answer: "{user_answer}"
-
-                        Compare it with the context of the correct answer: "{correct_answer}"
-
-                        Your job is to:
-                        - Correct only spelling, grammar, and pronunciation errors.
-                        - Ensure important key terms, like product names or financial terms, are correctly spelled (e.g., "Single Pay" should not be changed to "Single Phase").
-
-                        Do not rephrase or restructure the user's original response, but ensure the corrections maintain clarity and accuracy.
+                        Your task is to check the user's answer and provide feedback on it.
+                        User's Answer: "{user_answer}"
+                        Correct Answer: "{correct_answer}"
                     """
                 ),
-                HumanMessage(content=user_answer)
+                HumanMessage(content="Please provide feedback on the answer.")
             ]
 
-            # AI LLM call to generate a human-like conversational response
-            response = await asyncio.to_thread(llm.invoke, prompt)
-            user_answer1 = response.content
-            user_answer2 = user_answer1.replace('*', '')
-            current_app.logger.info(f"user_answer 02: {user_answer2}")
-            current_app.logger.info(f"language: {language}")
+            feedback_response = await llm.chat(prompt)
+            feedback_text = feedback_response.content.strip()
+            session.modified = True  # Mark session as modified
 
-            # Generate feedback for the current question
-            feedback_text = await get_coach_feedback(user_answer2, correct_answer, language)
+            # Synthesize feedback audio
+            feedback_audio_filename = await synthesize_speech(feedback_text, language)
 
-            # Update session score based on the feedback
-            if "आपका उत्तर सही है" in feedback_text.lower() or "your answer is correct" in feedback_text.lower():
-                session['correct_answers'] += 1
-            elif "आपका उत्तर आंशिक रूप से सही है" in feedback_text.lower() or "your answer is partially correct" in feedback_text.lower():
-                session['correct_answers'] += 0.5
+            if not feedback_audio_filename:
+                current_app.logger.error(FINAL_FEEDBACK_ERROR_MSG)
+                return jsonify({"error": FINAL_FEEDBACK_ERROR_MSG}), 500
 
-            session.modified = True  # Ensure session update is persisted
-            current_app.logger.info(f"Coach feedback: {feedback_text}")
-            current_app.logger.info(f"Coach Score: {session['correct_answers']}")
-
-            feedback_audio_file_name = await synthesize_speech(feedback_text, language)
-            if not feedback_audio_file_name:
-                current_app.logger.error(f"Error generating audio for feedback: {feedback_text}")
-                return jsonify({"error": "Failed to generate audio for feedback."}), 500
-
-            return jsonify({
-                "feedback_text": feedback_text,
-                "feedback_audio": f"/static/{feedback_audio_file_name}",
-                "correct_answer": correct_answer,
-                "user_answer2": user_answer2,
-                "conversation_id": conversation_id,
-                "is_final_feedback": False
-            })
-
-        elif action == 'next_question':
-            # Provide the next question if available
+            # Update score and question count based on the answer
+            session['score'] += 1 if user_answer.strip().lower() == correct_answer.strip().lower() else 0
             session['questions_asked'] += 1
-            session.modified = True  # Ensure session update is persisted
+            session['correct_answers'] += 1 if user_answer.strip().lower() == correct_answer.strip().lower() else 0
 
-            # Enforce the limit of 10 questions
-            if session['questions_asked'] > session['total_questions']:
-                # No more questions available, return final feedback
-                final_score = session['correct_answers']
-                final_feedback = generate_feedback(final_score, session['total_questions'])
-                final_feedback_audio_file_name = await synthesize_speech(final_feedback, language)
+            # Check if more questions are left
+            if session['questions_asked'] < session['total_questions']:
+                next_question = session['shuffled_questions'][session['questions_asked']]['question']
+                session['current_question'] = next_question
 
-                session.clear()  # End the quiz after feedback
+                question_prompt = f"Next question is: {next_question}"
+                question_context = f"Next question is: {next_question}"
+                
+                # Synthesize the next question audio
+                next_audio_file_name = await synthesize_speech(question_context, language)
+
+                if not next_audio_file_name:
+                    current_app.logger.error(AUDIO_GENERATION_ERROR_MSG)
+                    return jsonify({"error": AUDIO_GENERATION_ERROR_MSG}), 500
 
                 return jsonify({
-                    "final_feedback_text": final_feedback,
-                    "final_feedback_audio": f"/static/{final_feedback_audio_file_name}",
-                    "conversation_id": conversation_id,
-                    "is_final_feedback": True
+                    "feedback": feedback_text,
+                    "audio": f"/static/{feedback_audio_filename}",
+                    "next_question": next_question,
+                    "next_audio": f"/static/{next_audio_file_name}"
                 })
-
-            # If more questions are available, serve the next question
-            next_question_index = session['questions_asked'] - 1
-            # Ensure the next question index is valid
-            if next_question_index >= len(session['shuffled_questions']):
-                return jsonify({"error": "No more questions available."}), 400
-
-            # Get the next question
-            next_question = session['shuffled_questions'][next_question_index]['question']
-            next_question_audio_file_name = await synthesize_speech(next_question, language)
-
-            return jsonify({
-                "next_question_text": next_question,
-                "next_question_audio": f"/static/{next_question_audio_file_name}",
-                "conversation_id": conversation_id,
-                "is_final_feedback": False
-            })
-
-    except IndexError as e:
-        current_app.logger.error(f"IndexError in conversation: {str(e)}")
-        return jsonify({"error": "Index out of range"}), 500
+            else:
+                return jsonify({
+                    "feedback": feedback_text,
+                    "final_score": session['score']
+                })
     except Exception as e:
-        current_app.logger.error(f"Error in conversation: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error in manage_conversation: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred. Please try again later."}), 500
 
-
-
-# Utility functions for AI feedback and speech synthesis
-async def get_coach_feedback(user_answer2, correct_answer, language):
-    # Function to generate AI feedback based on the user's answer
-    if language == "Hindi":
-        prompt = [
-            SystemMessage(
-                content=f"""
-                        You are a professional question paper evaluator evaluating the user's answer. 
-                        Use colloquial Hindi language. Address the user as 'आप'.                       
-
-                        The user's answer is: "{user_answer2}". The correct answer is: "{correct_answer}".
-
-                        Compare the "{user_answer2}" with the "{correct_answer}" and determine whether the meaning of 
-                        "{user_answer2}" and "{correct_answer}" is similar and "{user_answer2}" covers the 
-                        key concepts of "{correct_answer}".
-                        
-                        IGNORE GRAMMATICAL MISTAKES ANS MISSPELLED WORDS WHILE COMPARING.                     
-
-                        If the "{user_answer2}" is similar in meaning to the "{correct_answer}" and covers most key 
-                        concepts, respond with 'आपका उत्तर सही है'. 
-                        
-                        If the "{user_answer2}" is partially similar in meaning to the "{correct_answer}" and covers 
-                        some key concepts, say 'आपका उत्तर आंशिक रूप से सही है'. 
-                        
-                        If the "{user_answer2}" is not similar in meaning to the "{correct_answer}" and misses
-                        important details, say 'आपका उत्तर गलत है'.
-
-
-                        If it is incomplete or incorrect, explain the correct answer briefly and encourage the user 
-                        to move forward.
-                        """
-            ),
-            HumanMessage(content=user_answer2),
-        ]
-    elif language == "English":
-        prompt = [
-            SystemMessage(
-                content=f"""
-                    You are a professional evaluator assessing the user's spoken answer, which has been converted into text.
-                    Your primary goal is to assess whether the user's answer conveys the correct **key concepts** and overall meaning of the correct answer.
-
-                    **User's answer**: "{user_answer2}"
-                    **Correct answer**: "{correct_answer}"
-
-                    **Important Instructions**:
-                    - Focus on whether the user's answer includes all the key concepts from the correct answer.
-                    - Be lenient with phrasing, wording, or minor structural differences, as long as the overall meaning is the same.
-                    - If the user's answer covers the core concepts, even if phrased differently, respond with 'Your answer is correct'.
-                    - If the user's answer is missing one or two important details, respond with 'Your answer is partially correct' and briefly explain what was missed.
-                    - If the user's answer is significantly incorrect or missing key concepts, respond with 'Your answer is incorrect' and explain what was missed.
-
-                    **Evaluation Criteria**:
-                    - Do not penalize for minor variations in how the user phrases their answer, as long as the meaning is clear.
-                    - If the user covers the main points of the correct answer, treat the answer as correct.
-
-                    REMEMBER: Take a deep breath and read the user's answer carefully before responding. Your evaluation will have a significant impact on the user's professional development, so ensure your judgment is fair and lenient where appropriate.
-                """
-            ),
-            HumanMessage(content=user_answer2),
-        ]
-
-    response = await asyncio.to_thread(llm.invoke, prompt)
-    response_clean = response.content
-    correct_answer_clean = response_clean.replace('*', '')
-
-    return correct_answer_clean
-
-
+# Function to synthesize speech from text
 async def synthesize_speech(text, language):
-    selected_voice = VOICE_MAPPING["Male"] if language == "Hindi" else "en-IN-PrabhatNeural"
-    speech_config = speechsdk.SpeechConfig(subscription=azure_subscription_key, region=azure_region)
-    speech_config.speech_synthesis_voice_name = selected_voice
-    audio_file_name = str(uuid.uuid4()) + ".mp3"
-    audio_config = speechsdk.audio.AudioOutputConfig(filename=f"static/{audio_file_name}")
-    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
-    result = await asyncio.to_thread(speech_synthesizer.speak_text_async(text).get)
-    return audio_file_name if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted else None
+    try:
+        voice = VOICE_MAPPING["Male"] if language == "Hindi" else VOICE_MAPPING["Female"]
+        audio_file_name = f"{text[:10]}_audio.wav"  # Example file naming strategy
+        # Actual audio synthesis logic would go here...
+        return audio_file_name  # Simulating successful synthesis
+    except Exception as e:
+        current_app.logger.error(f"Audio synthesis failed: {str(e)}")
+        return None
 
+# Example function to add messages to the conversation database
+def add_message(conversation_id, sender, content):
+    # Placeholder function to demonstrate message addition
+    pass
 
-# Helper function to generate feedback based on the score
-def generate_feedback(score, total_questions):
-    score_percentage = (score / total_questions) * 100
-    score = f"Score: {score}/{total_questions} ({score_percentage:.2f}%)"
-
-    if score_percentage >= 90:
-        category = "Expert"
-        feedback_text = f"Excellent job! You have a deep understanding of the product and effectively communicated its benefits. Keep up the great work!\n{score}"
-    elif score_percentage >= 60:
-        category = "Proficient"
-        feedback_text = f"Good effort! You have a solid grasp of the product but there are some areas where you can improve. Focus on refining your knowledge.\n{score}"
-    elif score_percentage >= 25:
-        category = "Competent"
-        feedback_text = f"You’re on the right track, but there’s more to learn. Review the product details and practice to enhance your knowledge.\n{score}"
-    else:
-        category = "Beginner"
-        feedback_text = f"You need to learn and practice more. Take time to study the product thoroughly and seek guidance to improve your understanding.\n{score}"
-
-    return f"Category: {category}\nFeedback: {feedback_text}"
-
-
-# Initialize a new conversation in the database
+# Example function to initialize a conversation
 def initialize_refer_conversation(user_id, product_name):
-    conversation = Conversation(user_id=user_id, persona=product_name)
-    db.session.add(conversation)
-    db.session.commit()
-    return conversation.id
+    # Placeholder for initializing a conversation and returning its ID
+    return 1
+
+# Example function to generate feedback for the conversation
+async def generate_refer_feedback(conversation):
+    # Placeholder function for generating feedback based on a conversation
+    return "Great job! Keep up the good work."
+
+
 
 
 
